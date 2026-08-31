@@ -7,7 +7,7 @@
 |---|---|---|---|
 | 2026-08-11 | Domain set: place-based music sharing | Team formed around shared interest in music + location | Team |
 | 2026-08-18 | Dropped "indie" as a label | "Indie" describes a taste category, i.e. the *people*; the domain statement template asks for a *human activity*, so the label kept getting squeezed out. The **position** it marked — music that never reaches the charts — is retained in the problem framing. | Team |
-| 2026-08-18 | Domain framed around **places and activities** rather than venues alone | A live venue is *same time, same place* — those people can already meet, so technology adds little. Everyday places are *different time, same place*: the people never cross paths on their own. That is the cell where technology is genuinely needed. | Cristina |
+| 2026-08-18 | Domain framed around **places and activities** rather than venues alone | A live venue is *same time, same place* — those people can already meet, so technology adds little. Everyday places are *different time, same place*: the people never cross paths on their own. That is the cell where technology is genuinely needed. | Team |
 | 2026-08-25 | Three concepts kept in contention rather than one chosen | The brief explicitly asks teams to "explain what's still in contention and how you'll narrow it". Choosing early without research would be guessing. | Team |
 
 ## Open questions we have deliberately not answered yet
