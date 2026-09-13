@@ -1,4 +1,4 @@
-import { putEcho, getAllEchoes, countEchoes } from './idb.js';
+import { putEcho, getAllEchoes, countEchoes, clearAllEchoes } from './idb.js';
 import { distanceMeters, randomPointNear, formatDistance, formatTimeAgo, watchLocation } from './geo.js';
 import { synthDemoAudioBlob } from './synth.js';
 import { initMap, onEchoClick, onMapClick, setUserPosition, panTo, renderEchoes, flyToEcho } from './map.js';
@@ -59,6 +59,7 @@ const dom = {
   profileAvatar: el('profileAvatar'),
   profileName: el('profileName'),
   testModeBtn: el('testModeBtn'),
+  resetDataBtn: el('resetDataBtn'),
   radiusRange: el('radiusRange'),
   radiusValue: el('radiusValue'),
   statusLine: el('statusLine'),
@@ -505,9 +506,35 @@ function setSimulatedPosition(pos) {
   showToast('Simulated location set to where you clicked');
 }
 
+// ---------- Reset ----------
+let resetArmed = false;
+let resetArmedTimer = null;
+
+async function resetLocalData() {
+  if (!resetArmed) {
+    resetArmed = true;
+    dom.resetDataBtn.textContent = '⚠️ Click again to confirm';
+    dom.resetDataBtn.classList.add('danger-armed');
+    clearTimeout(resetArmedTimer);
+    resetArmedTimer = setTimeout(() => {
+      resetArmed = false;
+      dom.resetDataBtn.textContent = '🗑️ Reset data';
+      dom.resetDataBtn.classList.remove('danger-armed');
+    }, 4000);
+    return;
+  }
+  clearTimeout(resetArmedTimer);
+  localStorage.removeItem('echospot-profile');
+  localStorage.removeItem('echospot-liked');
+  localStorage.removeItem('echospot-lastpos');
+  await clearAllEchoes();
+  location.reload();
+}
+
 // ---------- Bootstrap ----------
 function wireEvents() {
   dom.profileBtn.addEventListener('click', openOnboarding);
+  dom.resetDataBtn.addEventListener('click', resetLocalData);
 
   dom.testModeBtn.addEventListener('click', () => {
     state.testMode = !state.testMode;

@@ -53,6 +53,10 @@ export async function deleteEcho(id) {
   return withStore('readwrite', (store) => store.delete(id));
 }
 
+export async function clearAllEchoes() {
+  return withStore('readwrite', (store) => store.clear());
+}
+
 export async function countEchoes() {
   const db = await openDB();
   return new Promise((resolve, reject) => {
