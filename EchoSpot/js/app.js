@@ -17,6 +17,11 @@ const DEMO_PERSONAS = [
   { nickname: 'Fig Tree Dave', avatar: '🌳' },
   { nickname: 'Stray Cat', avatar: '🐈' },
   { nickname: 'Anonymous', avatar: '🕶️' },
+  { nickname: 'Riverside Rambler', avatar: '🚴' },
+  { nickname: 'Ferry Hopper', avatar: '⛴️' },
+  { nickname: 'Late Shift', avatar: '🌃' },
+  { nickname: 'Sunday Wanderer', avatar: '☕' },
+  { nickname: 'Old Soul', avatar: '📼' },
 ];
 
 const DEMO_SEEDS = [
@@ -30,6 +35,22 @@ const DEMO_SEEDS = [
   { title: 'Busker waiting under Story Bridge', mood: '🎸' },
   { title: 'Heart beating a little fast', mood: '🔥' },
   { title: 'Feeling calm today', mood: '🌊' },
+  { title: 'Guitar practice on the balcony', mood: '🎸' },
+  { title: 'Piano through an open window', mood: '🎹' },
+  { title: 'Humming on the ferry to South Bank', mood: '🎤' },
+  { title: 'Headphones on, city lights blurring', mood: '🎧' },
+  { title: 'River at dawn, still and quiet', mood: '🌊' },
+  { title: 'Moonlight over the Botanic Gardens', mood: '🌙' },
+  { title: 'Fireworks echo from South Bank', mood: '✨' },
+  { title: 'Drumline warming up in the Mall', mood: '🥁' },
+  { title: 'Bassline from the corner pub', mood: '🔥' },
+  { title: 'Jacaranda petals falling', mood: '🌙' },
+  { title: 'Skateboard wheels on Grey Street', mood: '🥁' },
+  { title: 'A song for whoever finds this', mood: '✨' },
+  { title: 'Rooftop bar, golden hour', mood: '🎧' },
+  { title: 'Practising scales before the gig', mood: '🎹' },
+  { title: 'Left my headphones here on purpose', mood: '🎤' },
+  { title: 'Thunderstorm rolling in from the west', mood: '🔥' },
 ];
 
 const el = (id) => document.getElementById(id);
@@ -168,7 +189,7 @@ function openOnboarding() {
 async function ensureSeedData(center) {
   const existing = await countEchoes();
   if (existing > 0) return;
-  const picks = [...DEMO_SEEDS].sort(() => Math.random() - 0.5).slice(0, 8);
+  const picks = [...DEMO_SEEDS].sort(() => Math.random() - 0.5).slice(0, 16);
   for (const seed of picks) {
     const persona = DEMO_PERSONAS[Math.floor(Math.random() * DEMO_PERSONAS.length)];
     const point = randomPointNear(center, 60, 2800);
