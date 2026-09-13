@@ -25,32 +25,32 @@ const DEMO_PERSONAS = [
 ];
 
 const DEMO_SEEDS = [
-  { title: 'Whistling at the Queen St lights', mood: '🎤' },
-  { title: 'Ten seconds before the CityCat departs', mood: '🎧' },
-  { title: 'Just after the rain stopped', mood: '🌊' },
-  { title: 'Synths at 3am', mood: '🎹' },
-  { title: 'Wind on the rooftop', mood: '🌙' },
-  { title: 'Static from an old record', mood: '✨' },
-  { title: 'Clatter from the food stall', mood: '🥁' },
-  { title: 'Busker waiting under Story Bridge', mood: '🎸' },
-  { title: 'Heart beating a little fast', mood: '🔥' },
-  { title: 'Feeling calm today', mood: '🌊' },
-  { title: 'Guitar practice on the balcony', mood: '🎸' },
-  { title: 'Piano through an open window', mood: '🎹' },
-  { title: 'Humming on the ferry to South Bank', mood: '🎤' },
-  { title: 'Headphones on, city lights blurring', mood: '🎧' },
-  { title: 'River at dawn, still and quiet', mood: '🌊' },
-  { title: 'Moonlight over the Botanic Gardens', mood: '🌙' },
-  { title: 'Fireworks echo from South Bank', mood: '✨' },
-  { title: 'Drumline warming up in the Mall', mood: '🥁' },
-  { title: 'Bassline from the corner pub', mood: '🔥' },
-  { title: 'Jacaranda petals falling', mood: '🌙' },
-  { title: 'Skateboard wheels on Grey Street', mood: '🥁' },
-  { title: 'A song for whoever finds this', mood: '✨' },
-  { title: 'Rooftop bar, golden hour', mood: '🎧' },
-  { title: 'Practising scales before the gig', mood: '🎹' },
-  { title: 'Left my headphones here on purpose', mood: '🎤' },
-  { title: 'Thunderstorm rolling in from the west', mood: '🔥' },
+  { title: 'Whistling at the Queen St lights', mood: '🎤', genre: 'A Cappella' },
+  { title: 'Ten seconds before the CityCat departs', mood: '🎧', genre: 'Field Recording' },
+  { title: 'Just after the rain stopped', mood: '🌊', genre: 'Ambient' },
+  { title: 'Synths at 3am', mood: '🎹', genre: 'Synthwave' },
+  { title: 'Wind on the rooftop', mood: '🌙', genre: 'Ambient Drone' },
+  { title: 'Static from an old record', mood: '✨', genre: 'Lo-fi' },
+  { title: 'Clatter from the food stall', mood: '🥁', genre: 'Percussion Jam' },
+  { title: 'Busker waiting under Story Bridge', mood: '🎸', genre: 'Acoustic Folk' },
+  { title: 'Heart beating a little fast', mood: '🔥', genre: 'Drum & Bass' },
+  { title: 'Feeling calm today', mood: '🌊', genre: 'Downtempo' },
+  { title: 'Guitar practice on the balcony', mood: '🎸', genre: 'Indie Rock' },
+  { title: 'Piano through an open window', mood: '🎹', genre: 'Piano Ballad' },
+  { title: 'Humming on the ferry to South Bank', mood: '🎤', genre: 'Vocal Loop' },
+  { title: 'Headphones on, city lights blurring', mood: '🎧', genre: 'Chillhop' },
+  { title: 'River at dawn, still and quiet', mood: '🌊', genre: 'Ambient' },
+  { title: 'Moonlight over the Botanic Gardens', mood: '🌙', genre: 'Nocturne' },
+  { title: 'Fireworks echo from South Bank', mood: '✨', genre: 'Cinematic' },
+  { title: 'Drumline warming up in the Mall', mood: '🥁', genre: 'Marching Beat' },
+  { title: 'Bassline from the corner pub', mood: '🔥', genre: 'Funk' },
+  { title: 'Jacaranda petals falling', mood: '🌙', genre: 'Dream Pop' },
+  { title: 'Skateboard wheels on Grey Street', mood: '🥁', genre: 'Trap' },
+  { title: 'A song for whoever finds this', mood: '✨', genre: 'Ethereal' },
+  { title: 'Rooftop bar, golden hour', mood: '🎧', genre: 'Deep House' },
+  { title: 'Practising scales before the gig', mood: '🎹', genre: 'Jazz' },
+  { title: 'Left my headphones here on purpose', mood: '🎤', genre: 'Bedroom Pop' },
+  { title: 'Thunderstorm rolling in from the west', mood: '🔥', genre: 'Post-Rock' },
 ];
 
 const el = (id) => document.getElementById(id);
@@ -89,6 +89,7 @@ const dom = {
   detailModal: el('detailModal'),
   detailClose: el('detailClose'),
   detailTitle: el('detailTitle'),
+  detailGenre: el('detailGenre'),
   detailAvatar: el('detailAvatar'),
   detailNickname: el('detailNickname'),
   detailTime: el('detailTime'),
@@ -201,6 +202,7 @@ async function ensureSeedData(center) {
       lng: point.lng,
       title: seed.title,
       mood: seed.mood,
+      genre: seed.genre,
       nickname: persona.nickname,
       avatar: persona.avatar,
       createdAt: Date.now() - Math.floor(Math.random() * 5 * 86400000),
@@ -255,7 +257,7 @@ function renderFeedList(list) {
             <span class="echo-mood">${echo.mood}</span>
             <span class="echo-title">${escapeHtml(echo.title)}</span>
           </div>
-          <div class="echo-meta">${echo.avatar} ${escapeHtml(echo.nickname)} · ${formatTimeAgo(echo.createdAt)} · ${formatDistance(echo.dist)}</div>
+          <div class="echo-meta">${echo.genre ? `<span class="genre-pill">${escapeHtml(echo.genre)}</span> · ` : ''}${echo.avatar} ${escapeHtml(echo.nickname)} · ${formatTimeAgo(echo.createdAt)} · ${formatDistance(echo.dist)}</div>
         </div>
         <div class="echo-likes">${liked ? '❤️' : '🤍'} ${echo.likes || 0}</div>
       </li>`;
@@ -322,6 +324,8 @@ function openDetail(id) {
   if (!echo) return;
   state.detailEchoId = id;
   dom.detailTitle.textContent = echo.title;
+  dom.detailGenre.textContent = echo.genre || '';
+  dom.detailGenre.classList.toggle('hidden', !echo.genre);
   dom.detailAvatar.textContent = echo.avatar;
   dom.detailNickname.textContent = echo.nickname;
   dom.detailTime.textContent = formatTimeAgo(echo.createdAt);
