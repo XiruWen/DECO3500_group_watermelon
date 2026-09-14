@@ -48,4 +48,3 @@ context differs from ours.)*
 - [ ] At least **two** sync/async × co-located/distributed opportunities, cells named
 - [ ] Written **for teammates** — no whole-paper summary
 - [ ] ~400 words
-- [ ] Added to the index table in `README.md`
