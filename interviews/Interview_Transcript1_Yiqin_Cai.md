@@ -24,7 +24,7 @@ Actually I think it's because I'm new here. When I was at home, all the places w
 Think of the last time you listened to music while travelling to or arriving somewhere. How did it shape your experience of that place?
 
 **Participant:**
-I use it to make places less frightening. That sounds dramatic, but when I first arrived I didn't really want to be outside. Everything was loud and I couldn't tell what anything was. Putting headphones in made it manageable.
+I use it to make places less frightening. That sounds dramatic, but when I first arrived I didn't really want to be outside. Everything was loud and I couldn't tell what anything was. Putting headphones in made it manageable. 
 
 The problem is I think I've missed things because of it. My flatmate knows the names of shops, the guy who works at the fruit place, she's had conversations. I've walked past the same shops two hundred times with headphones in.
 
