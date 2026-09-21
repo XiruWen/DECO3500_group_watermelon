@@ -82,15 +82,4 @@ What would make sharing easier?
 **Participant:**
 If people could discover it naturally. Then they could choose whether they wanted to listen instead of me directly asking them.
 
-# Research Insights
-
-| Evidence                                          | Initial Code              | Theme                      |
-| ------------------------------------------------- | ------------------------- | -------------------------- |
-| A stranger's response felt more meaningful        | Independent discovery     | **Stranger discovery**     |
-| Wanted to know where someone heard the track      | Context adds meaning      | **Listener context**       |
-| A track remained connected to the river           | Place influences creation | **Music-place connection** |
-| Public uploads received little attention          | Discovery difficulty      | **Visibility**             |
-| Different listeners imagined different places     | Personal interpretation   | **Meaning and memory**     |
-| Direct sharing can feel like asking for attention | Social pressure           | **Sharing pressure**       |
-| Natural discovery would feel easier               | Passive discovery         | **Low-pressure sharing**   |
 
