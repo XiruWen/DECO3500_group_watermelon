@@ -6,20 +6,22 @@
 <table>
 <thead><tr><th>主题</th><th>关键词</th><th>意思 / 证据</th><th>功能设计指导</th></tr></thead>
 <tbody>
-<tr><td rowspan="2">情境计算</td><td>此刻驱动</td><td>听什么看当下心情、天气、在干嘛，不看固定品味</td><td>每条回声带心情和场景标签</td></tr>
-<tr><td>环境声记忆</td><td>磨豆机、电梯声这些非音乐声，才是最牢的地点记忆</td><td>支持录自己的环境声，痕迹长期留</td></tr>
-<tr><td>时空矩阵</td><td>地点绑定</td><td>发生过事的地方会把歌黏住（电梯、66路、公园、西湖）</td><td>歌钉在真实地点，地图落点</td></tr>
-<tr><td rowspan="3">人策展非算法</td><td>人为策展</td><td>歌单乱七八糟才像人挑的，大家还挺吃这套</td><td>EchoVibe 共享队列，显示是谁选的</td></tr>
-<tr><td>发现靠人</td><td>朋友、社群、小场地，信息太散</td><td>地点分发替代算法推荐</td></tr>
-<tr><td>创作者难出头</td><td>独立音乐人最愁没人发现</td><td>让创作者在有意义地点留歌</td></tr>
-<tr><td rowspan="2">社会性不是社交媒体</td><td>人加理由</td><td>没名没因的歌等于算法推荐</td><td>加一句为什么留这，匿名但给上下文</td></tr>
-<tr><td>匿名好奇</td><td>陌生人的痕迹没社交压力，反而更认真听</td><td>只昵称头像，不暴露实时位置</td></tr>
-<tr><td>觉察到对话</td><td>想回没回</td><td>想回应却因麻烦或尴尬咽回去了</td><td>一步式回应，点赞当破冰</td></tr>
-<tr><td rowspan="2">隐私与自我呈现</td><td>留痕是表演</td><td>留歌是在秀品味，也怕暴露隐私（谁都能猜到我在哪）</td><td>留痕要刻意，能改能删</td></tr>
-<tr><td>参与不对称</td><td>大家都多拿少给，还挑匿名的地方留</td><td>接受不对称，按匿名度选地点</td></tr>
-<tr><td>冷启动</td><td>留存等于信任</td><td>痕迹没了就觉得这 app 废了</td><td>本地种子回声，校区范围保密度</td></tr>
+<tr><td rowspan="2">情境计算</td><td>此刻驱动</td><td>听什么看当下心情、天气、在干嘛，不看固定品味<br><em>"Sunny weather makes me want happier music, while rainy weather makes me more likely to choose something calm." (T1_XiruWen)</em></td><td>每条回声带心情和场景标签</td></tr>
+<tr><td>环境声记忆</td><td>楼梯间跺脚声、咖啡机声这些非音乐的环境声，本身就是最牢的地点记忆，不一定要绑一首歌<br><em>"I don't have a song for that. It's the sound itself." (T1_Yiqin_Cai)</em></td><td>支持录自己的环境声，痕迹长期留</td></tr>
+<tr><td>时空矩阵</td><td>地点绑定</td><td>发生过事的地方会把歌黏住（电梯、66路、公园、西湖）<br><em>"The place. Definitely the place. My mood changes every day but that bus stop doesn't." (T1_Yiqin_Cai)</em></td><td>歌钉在真实地点，地图落点</td></tr>
+<tr><td rowspan="3">人策展非算法</td><td>人为策展</td><td>歌单乱七八糟才像人挑的，大家还挺吃这套<br><em>"That had to be a person. No normal algorithm would do that." (T4_CristinaZhang)</em></td><td>EchoVibe 共享队列，显示是谁选的</td></tr>
+<tr><td>发现靠人</td><td>朋友、社群、小场地，信息太散<br><em>"Mostly through friends, small online communities, or sometimes when I hear something playing in a café or a small venue." (T2_LingjieRuan)</em></td><td>地点分发替代算法推荐</td></tr>
+<tr><td>创作者难出头</td><td>独立音乐人最愁没人发现<br><em>"My biggest difficulty truly is how to let people who genuinely love this niche indie music discover me." (T3_JieWen)</em></td><td>让创作者在有意义地点留歌</td></tr>
+<tr><td rowspan="2">社会性不是社交媒体</td><td>人加理由</td><td>没名没因的歌等于算法推荐<br><em>"A song with nobody behind it... Otherwise it's the same as an algorithm to me." (T1_Yiqin_Cai)</em></td><td>加一句为什么留这，匿名但给上下文</td></tr>
+<tr><td>匿名好奇</td><td>陌生人的痕迹没社交压力，反而更认真听<br><em>"With a stranger I'd have no idea, so I'd actually listen properly to try and work it out." (T1_Yiqin_Cai)</em></td><td>只昵称头像，不暴露实时位置</td></tr>
+<tr><td>觉察到对话</td><td>想回没回</td><td>想回应却因麻烦或尴尬咽回去了<br><em>"I thought about writing, 'No, it doesn't,' underneath it, but that seemed a bit rude, so I didn't." (T3_CristinaZhang)</em></td><td>一步式回应，点赞当破冰</td></tr>
+<tr><td rowspan="2">隐私与自我呈现</td><td>留痕是表演</td><td>留歌是在秀品味，也怕暴露隐私（谁都能猜到我在哪）<br><em>"if I leave a song at my bus stop, and I'm there four times a week... anyone who wants to work out where I am can do it." (T1_Yiqin_Cai)</em></td><td>留痕要刻意，能改能删</td></tr>
+<tr><td>参与不对称</td><td>人们大多是"拿得多、留得少"的旁观者，只愿意在不暴露自己的匿名地点留痕<br><em>"I'd take from everywhere and leave things only in places that aren't mine." (T1_Yiqin_Cai)</em></td><td>接受不对称，按匿名度选地点</td></tr>
+<tr><td>冷启动</td><td>留存等于信任</td><td>痕迹没了就觉得这 app 废了<br><em>"If there was nothing there, I'd assume it was empty everywhere." (T1_Yiqin_Cai)</em></td><td>本地种子回声，校区范围保密度</td></tr>
 </tbody>
 </table>
+
+*引号内为访谈原话，出处见 interviews/ 下的转录文件名。*
 
 **策划侧补一句：** 用户自己产的内容才长久有用，纯病毒没用。版权到期歌链会挂，所以只存引用不存音频。赶通勤这种场景化触达有效。
 
@@ -54,20 +56,22 @@
 <table>
 <thead><tr><th>Theme</th><th>Keyword</th><th>Meaning / evidence</th><th>Design guidance</th></tr></thead>
 <tbody>
-<tr><td rowspan="2">Contextual computing</td><td>Moment-driven</td><td>People pick by mood, weather, what they're doing, not a fixed taste</td><td>Each echo carries a mood and scene tag</td></tr>
-<tr><td>Ambient sound memory</td><td>Grinder, lift, mahjong sounds are the strongest place anchors</td><td>Let users record their own ambient sound, keep traces</td></tr>
-<tr><td>Time-space matrix</td><td>Place-binding</td><td>A song sticks to a place once something happens there (lift, bus 66, park, lake)</td><td>Song pinned to a real spot on the map</td></tr>
-<tr><td rowspan="3">Curation over algorithm</td><td>Human curation</td><td>A messy playlist proves a human chose it, and people love that</td><td>EchoVibe shared queue that shows who picked it</td></tr>
-<tr><td>Discovery through people</td><td>Friends, communities, small venues; info is scattered</td><td>Place based distribution instead of algorithm feed</td></tr>
-<tr><td>Creator discovery gap</td><td>Indie makers most worry about being found by the right people</td><td>Let creators drop tracks at meaningful places</td></tr>
-<tr><td rowspan="2">Social, not social media</td><td>Person plus reason</td><td>A song with no name and no why is just an algorithm</td><td>Add a why line, anonymous but with context</td></tr>
-<tr><td>Anonymous curiosity</td><td>A stranger's trace has zero social pressure, so people listen harder</td><td>Nickname and avatar only, no live location</td></tr>
-<tr><td>Awareness to conversation</td><td>Want to reply but don't</td><td>They hold back because it's effort or awkward</td><td>One-step reply, like as icebreaker</td></tr>
-<tr><td rowspan="2">Privacy and self-presentation</td><td>Leaving is performing taste</td><td>Dropping a song shows your taste and risks privacy (anyone can guess where I am)</td><td>Leaving stays deliberate, allow edit and remove</td></tr>
-<tr><td>Asymmetric use</td><td>Everyone takes more than they give, and picks anonymous spots</td><td>Accept the imbalance, let people pick by anonymity</td></tr>
-<tr><td>Cold start</td><td>Persistence is trust</td><td>If a trace vanishes, the app feels dead</td><td>Seed local echoes, keep density within campus</td></tr>
+<tr><td rowspan="2">Contextual computing</td><td>Moment-driven</td><td>People pick by mood, weather, what they're doing, not a fixed taste<br><em>"Sunny weather makes me want happier music, while rainy weather makes me more likely to choose something calm." (T1_XiruWen)</em></td><td>Each echo carries a mood and scene tag</td></tr>
+<tr><td>Ambient sound memory</td><td>Stairwell stamping, café grinder: non-music sounds are the real place anchors, no song needed<br><em>"I don't have a song for that. It's the sound itself." (T1_Yiqin_Cai)</em></td><td>Let users record their own ambient sound, keep traces</td></tr>
+<tr><td>Time-space matrix</td><td>Place-binding</td><td>A song sticks to a place once something happens there (lift, bus 66, park, lake)<br><em>"The place. Definitely the place. My mood changes every day but that bus stop doesn't." (T1_Yiqin_Cai)</em></td><td>Song pinned to a real spot on the map</td></tr>
+<tr><td rowspan="3">Curation over algorithm</td><td>Human curation</td><td>A messy playlist proves a human chose it, and people love that<br><em>"That had to be a person. No normal algorithm would do that." (T4_CristinaZhang)</em></td><td>EchoVibe shared queue that shows who picked it</td></tr>
+<tr><td>Discovery through people</td><td>Friends, communities, small venues; info is scattered<br><em>"Mostly through friends, small online communities, or sometimes when I hear something playing in a café or a small venue." (T2_LingjieRuan)</em></td><td>Place based distribution instead of algorithm feed</td></tr>
+<tr><td>Creator discovery gap</td><td>Indie makers most worry about being found by the right people<br><em>"My biggest difficulty truly is how to let people who genuinely love this niche indie music discover me." (T3_JieWen)</em></td><td>Let creators drop tracks at meaningful places</td></tr>
+<tr><td rowspan="2">Social, not social media</td><td>Person plus reason</td><td>A song with no name and no why is just an algorithm<br><em>"A song with nobody behind it... Otherwise it's the same as an algorithm to me." (T1_Yiqin_Cai)</em></td><td>Add a why line, anonymous but with context</td></tr>
+<tr><td>Anonymous curiosity</td><td>A stranger's trace has zero social pressure, so people listen harder<br><em>"With a stranger I'd have no idea, so I'd actually listen properly to try and work it out." (T1_Yiqin_Cai)</em></td><td>Nickname and avatar only, no live location</td></tr>
+<tr><td>Awareness to conversation</td><td>Want to reply but don't</td><td>They hold back because it's effort or awkward<br><em>"I thought about writing, 'No, it doesn't,' underneath it, but that seemed a bit rude, so I didn't." (T3_CristinaZhang)</em></td><td>One-step reply, like as icebreaker</td></tr>
+<tr><td rowspan="2">Privacy and self-presentation</td><td>Leaving is performing taste</td><td>Dropping a song shows your taste and risks privacy (anyone can guess where I am)<br><em>"if I leave a song at my bus stop, and I'm there four times a week... anyone who wants to work out where I am can do it." (T1_Yiqin_Cai)</em></td><td>Leaving stays deliberate, allow edit and remove</td></tr>
+<tr><td>Asymmetric use</td><td>People mostly lurk — taking more than they leave — and only drop traces in anonymous spots that aren't theirs<br><em>"I'd take from everywhere and leave things only in places that aren't mine." (T1_Yiqin_Cai)</em></td><td>Accept the imbalance, let people pick by anonymity</td></tr>
+<tr><td>Cold start</td><td>Persistence is trust</td><td>If a trace vanishes, the app feels dead<br><em>"If there was nothing there, I'd assume it was empty everywhere." (T1_Yiqin_Cai)</em></td><td>Seed local echoes, keep density within campus</td></tr>
 </tbody>
 </table>
+
+*Quotes are verbatim from the interview transcripts in interviews/; file names are given as citations.*
 
 **Planner side note:** User made content is the only kind that lasts; pure virality does not. When a licence expires the song link dies, so we store a reference, never the audio. Contextual reach like the morning commute works.
 
