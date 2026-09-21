@@ -1,4 +1,4 @@
-# Simulated Interview Transcript 1
+# Interview Transcript 1
 
 **Participant:** P7 (de-identified)
 **Interviewer:** Lingjie Ruan
