@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>EchoSpot · Sound Echo Map</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎧</text></svg>" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">🎧 EchoSpot <span class="brand-sub">Leave your sound where you stand</span></div>
+      <div class="topbar-actions">
+        <button id="profileBtn" class="chip-btn"><span id="profileAvatar">🙂</span><span id="profileName">Me</span></button>
+        <button id="testModeBtn" class="chip-btn" title="No location access? Turn this on, then click anywhere on the map to simulate your position">🧭 Simulate location: off</button>
+        <button id="resetDataBtn" class="chip-btn" title="Clear all local EchoSpot data (profile, likes, demo echoes) and start fresh">🗑️ Reset data</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <div id="map"></div>
+
+      <aside class="panel" id="feedPanel">
+        <div class="panel-handle" id="panelHandle"></div>
+        <div class="panel-header">
+          <h2>Nearby Echoes</h2>
+          <div class="radius-control">
+            <label for="radiusRange">Search radius</label>
+            <input type="range" id="radiusRange" min="100" max="5000" step="100" value="1000" />
+            <span id="radiusValue">1.0 km</span>
+          </div>
+        </div>
+        <div class="status-line" id="statusLine">Locating…</div>
+        <ul class="echo-list" id="echoList"></ul>
+      </aside>
+
+      <button id="dropBtn" class="fab" title="Leave an echo here">＋</button>
+    </main>
+
+    <!-- First-time onboarding: set nickname & avatar -->
+    <div class="modal-overlay hidden" id="onboardModal">
+      <div class="modal">
+        <h2>Welcome to EchoSpot</h2>
+        <p class="modal-desc">
+          Leave a song or a moment's feeling at every place you visit — anyone who passes by later can find it on the map and choose whether to play it.
+          <br /><br />
+          Everything is saved right here in your own browser. "Nearby Echoes" also includes a few locally-generated demo echoes so you can try it out right away.
+        </p>
+        <label class="field-label">Pick a nickname</label>
+        <input type="text" id="onboardName" maxlength="12" placeholder="e.g. Night Wanderer" />
+        <label class="field-label">Pick an avatar</label>
+        <div class="emoji-picker" id="onboardAvatarPicker"></div>
+        <button id="onboardSubmit" class="primary-btn">Start exploring</button>
+      </div>
+    </div>
+
+    <!-- Drop an echo -->
+    <div class="modal-overlay hidden" id="dropModal">
+      <div class="modal">
+        <div class="modal-title-row">
+          <h2>Leave an echo</h2>
+          <button class="icon-btn" id="dropClose">✕</button>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="upload" type="button">Upload audio</button>
+          <button class="tab-btn" data-tab="record" type="button">Record live</button>
+        </div>
+
+        <div class="tab-panel" id="tabUpload">
+          <label class="file-drop" id="fileDropLabel" for="fileInput">
+            <span id="fileHint">Click to choose an audio file</span>
+          </label>
+          <input type="file" id="fileInput" accept="audio/*" class="hidden-input" />
+        </div>
+
+        <div class="tab-panel hidden" id="tabRecord">
+          <button id="recordBtn" class="record-btn" type="button">🎙️ Start recording</button>
+          <div class="record-time" id="recordTime">00:00</div>
+          <audio id="recordPreview" controls class="hidden"></audio>
+        </div>
+
+        <label class="field-label">Title</label>
+        <input type="text" id="dropTitle" maxlength="30" placeholder="Give this echo a name" />
+
+        <label class="field-label">Mood / type</label>
+        <div class="emoji-picker" id="dropMoodPicker"></div>
+
+        <div class="drop-location" id="dropLocationInfo">Will be dropped at: locating…</div>
+
+        <button id="dropSubmit" class="primary-btn" disabled>Drop it here</button>
+      </div>
+    </div>
+
+    <!-- Echo detail / player card -->
+    <div class="modal-overlay hidden" id="detailModal">
+      <div class="modal">
+        <div class="modal-title-row">
+          <h2 id="detailTitle">Title</h2>
+          <button class="icon-btn" id="detailClose">✕</button>
+        </div>
+        <div class="detail-meta">
+          <span id="detailGenre" class="genre-pill hidden"></span>
+          <span id="detailAvatar">🙂</span>
+          <span id="detailNickname">Nickname</span>
+          <span class="dot">·</span>
+          <span id="detailTime">just now</span>
+        </div>
+        <div class="detail-distance" id="detailDistance"></div>
+        <div class="player">
+          <button id="detailPlayBtn" class="play-btn">▶</button>
+          <div class="player-track" id="detailTrack">
+            <div class="player-progress" id="detailProgress"></div>
+          </div>
+        </div>
+        <div class="detail-actions">
+          <button id="detailLikeBtn" class="like-btn"><span id="detailLikeIcon">🤍</span> <span id="detailLikeCount">0</span></button>
+          <button id="detailLocateBtn" class="ghost-btn">📍 View on map</button>
+        </div>
+      </div>
+    </div>
+
+    <audio id="audioPlayer" class="hidden"></audio>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
