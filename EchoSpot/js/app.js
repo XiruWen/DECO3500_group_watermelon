@@ -1,4 +1,4 @@
-import { putEcho, getAllEchoes, countEchoes, clearAllEchoes } from './idb.js';
+import { putEcho, getAllEchoes, countEchoes, clearAllEchoes, deleteEcho } from './idb.js';
 import { distanceMeters, randomPointNear, formatDistance, formatTimeAgo, watchLocation } from './geo.js';
 import { synthDemoAudioBlob } from './synth.js';
 import { initMap, onEchoClick, onMapClick, setUserPosition, panTo, renderEchoes, flyToEcho, refreshMapSize } from './map.js';
@@ -127,6 +127,7 @@ const dom = {
   detailContextText: el('detailContextText'),
   feedPanel: el('feedPanel'),
   panelHandle: el('panelHandle'),
+  peekCount: el('peekCount'),
   lockedHint: el('lockedHint'),
   lockedHintText: el('lockedHintText'),
   takeMeThereBtn: el('takeMeThereBtn'),
@@ -148,6 +149,7 @@ const state = {
   realPosition: null,
   testMode: false,
   ready: false,
+  toppedUp: false,
   geoFallbackNote: '',
   radius: Number(dom.radiusRange.value),
   echoes: [],
@@ -308,46 +310,87 @@ function openOnboarding() {
 }
 
 // ---------- Demo data ----------
-async function ensureSeedData(center) {
-  const existing = await countEchoes();
-  if (existing > 0) return;
-  const picks = [...DEMO_SEEDS].sort(() => Math.random() - 0.5).slice(0, 16);
-  for (const seed of picks) {
-    const persona = DEMO_PERSONAS[Math.floor(Math.random() * DEMO_PERSONAS.length)];
-    const point = randomPointNear(center, 60, 2800);
-    const id = uid();
-    const audioBlob = await synthDemoAudioBlob(id, seed.mood, 5 + Math.random() * 3);
-    const echo = {
-      id,
-      lat: point.lat,
-      lng: point.lng,
-      title: seed.title,
-      mood: seed.mood,
-      genre: seed.genre,
-      audioType: mapGenreToType(seed.genre),
-      context: '',
-      nickname: persona.nickname,
-      avatar: persona.avatar,
-      createdAt: Date.now() - Math.floor(Math.random() * 5 * 86400000),
-      likes: Math.floor(Math.random() * 20),
-      plays: Math.floor(Math.random() * 50),
-      replies: [],
-      audioBlob,
-      url: '',
-      duration: Math.round(5 + Math.random() * 3),
-      consent: true,
-      isDemo: true,
-    };
-    await putEcho(echo);
+// Demo echoes are clustered around wherever the person opens the app: a couple at arm's reach
+// so the unlock rule can be felt immediately, the rest within a short walk. Without this the
+// map is empty wherever you happen to be standing, which reads as a broken app.
+const SEED_VERSION = 3;
+const SEED_RANGES = [[8, 30], [12, 40], [25, 48], [70, 160], [120, 280], [200, 420], [350, 700], [600, 1200]];
+const TOPUP_RANGES = [[10, 35], [20, 45], [80, 200], [150, 400]];
+
+async function buildDemoEcho(seed, point) {
+  const persona = DEMO_PERSONAS[Math.floor(Math.random() * DEMO_PERSONAS.length)];
+  const id = uid();
+  const audioBlob = await synthDemoAudioBlob(id, seed.mood, 5 + Math.random() * 3);
+  return {
+    id,
+    lat: point.lat,
+    lng: point.lng,
+    title: seed.title,
+    mood: seed.mood,
+    genre: seed.genre,
+    audioType: mapGenreToType(seed.genre),
+    context: seed.context || '',
+    nickname: persona.nickname,
+    avatar: persona.avatar,
+    createdAt: Date.now() - Math.floor(Math.random() * 5 * 86400000),
+    likes: Math.floor(Math.random() * 20),
+    plays: Math.floor(Math.random() * 50),
+    replies: [],
+    audioBlob,
+    url: '',
+    duration: Math.round(5 + Math.random() * 3),
+    consent: true,
+    isDemo: true,
+  };
+}
+
+async function seedAround(center, ranges) {
+  const picks = [...DEMO_SEEDS].sort(() => Math.random() - 0.5).slice(0, ranges.length);
+  for (let i = 0; i < picks.length; i++) {
+    const [min, max] = ranges[i];
+    await putEcho(await buildDemoEcho(picks[i], randomPointNear(center, min, max)));
   }
 }
 
+async function ensureSeedData(center) {
+  const seeded = Number(localStorage.getItem('echospot-seed-version') || 0);
+  const existing = await countEchoes();
+
+  if (existing > 0 && seeded === SEED_VERSION) return;
+
+  // Replace an older demo set, but never touch echoes this person left themselves.
+  if (existing > 0) {
+    for (const echo of await getAllEchoes()) {
+      if (echo.isDemo) await deleteEcho(echo.id);
+    }
+  }
+
+  await seedAround(center, SEED_RANGES);
+  localStorage.setItem('echospot-seed-version', String(SEED_VERSION));
+}
+
+// Someone who opens the app in a different suburb — or a tradeshow visitor standing where the
+// first seed set was never placed — still needs something within walking distance.
+async function topUpNearby(center) {
+  const near = state.echoes.filter(
+    (e) => e.isDemo && distanceMeters(center, { lat: e.lat, lng: e.lng }) <= 400
+  );
+  if (near.length >= 2) return false;
+  await seedAround(center, TOPUP_RANGES);
+  state.echoes = (await getAllEchoes()).map(normalizeEcho);
+  return true;
+}
+
 async function ensureReady(center) {
-  if (state.ready) return;
+  if (state.ready) {
+    await topUpNearby(center);
+    return;
+  }
   state.ready = true;
   await ensureSeedData(center);
   state.echoes = (await getAllEchoes()).map(normalizeEcho);
   migrateOldLikes();
+  await topUpNearby(center);
 }
 
 // Migrate "likedIds" from older versions into explicit heart reactions
@@ -396,11 +439,35 @@ function refresh() {
   const note = state.geoFallbackNote ? ` · ${state.geoFallbackNote}` : '';
   const playable = list.filter((e) => e.url || e.dist <= UNLOCK_DISTANCE).length;
   dom.statusLine.textContent = `${list.length} echo${list.length === 1 ? '' : 'es'} within ${formatRadiusLabel(state.radius)} · ${playable} playable here${note}`;
+  dom.peekCount.textContent = list.length
+    ? `${list.length} nearby · ${playable} playable`
+    : 'nothing within range';
 }
 
 function renderFeedList(list) {
   if (list.length === 0) {
-    dom.echoList.innerHTML = `<li class="empty-hint">No echoes near you yet — be the first to drop one 🎵</li>`;
+    const nearest = state.position
+      ? state.echoes
+          .map((e) => distanceMeters(state.position, { lat: e.lat, lng: e.lng }))
+          .sort((a, b) => a - b)[0]
+      : null;
+    dom.echoList.innerHTML = nearest
+      ? `<li class="empty-hint">Nothing within ${formatRadiusLabel(state.radius)}.
+           The closest echo is <b>${formatDistance(nearest)}</b> away.
+           <button class="widen-btn" id="widenBtn">Look out to ${formatRadiusLabel(Math.min(2000, Math.ceil(nearest / 100) * 100))}</button>
+           <span class="empty-or">or leave the first one here 🎵</span></li>`
+      : `<li class="empty-hint">No echoes near you yet — be the first to drop one 🎵</li>`;
+    const widen = el('widenBtn');
+    if (widen && nearest) {
+      widen.addEventListener('click', () => {
+        const next = Math.min(2000, Math.ceil(nearest / 100) * 100);
+        dom.radiusRange.value = String(next);
+        state.radius = next;
+        dom.radiusValue.textContent = formatRadiusLabel(next);
+        syncUserMarker();
+        refresh();
+      });
+    }
     return;
   }
   dom.echoList.innerHTML = list
@@ -850,6 +917,13 @@ function handlePositionUpdate(pos, meta) {
       syncUserMarker();
       refresh();
     });
+  } else if (!state.toppedUp && state.ready) {
+    state.toppedUp = true;
+    topUpNearby(pos).then((added) => {
+      syncUserMarker();
+      refresh();
+      if (added) showToast('Loaded the echoes around you');
+    });
   } else {
     syncUserMarker();
     refresh();
@@ -929,17 +1003,33 @@ function bottomSheetInset() {
   return isPhoneLayout() ? dom.feedPanel.getBoundingClientRect().height : 0;
 }
 
-function togglePanelExpanded(force) {
-  const expanded = typeof force === 'boolean' ? force : !dom.feedPanel.classList.contains('expanded');
-  dom.feedPanel.classList.toggle('expanded', expanded);
-  dom.panelHandle.setAttribute('aria-expanded', String(expanded));
+const SHEET_STATES = ['peek', 'default', 'expanded'];
+
+function setSheetState(next) {
+  const state_ = SHEET_STATES.includes(next) ? next : 'default';
+  dom.feedPanel.classList.remove('peek', 'expanded');
+  if (state_ !== 'default') dom.feedPanel.classList.add(state_);
+  dom.feedPanel.dataset.sheet = state_;
+  dom.panelHandle.setAttribute('aria-expanded', String(state_ !== 'peek'));
   setTimeout(refreshMapSize, 260);
+}
+
+function currentSheetState() {
+  return dom.feedPanel.dataset.sheet || 'default';
+}
+
+function stepSheet(direction) {
+  const i = SHEET_STATES.indexOf(currentSheetState());
+  const next = Math.min(SHEET_STATES.length - 1, Math.max(0, i + direction));
+  setSheetState(SHEET_STATES[next]);
 }
 
 // ---------- Bootstrap ----------
 function wireEvents() {
   dom.takeMeThereBtn.addEventListener('click', openDirectionsToDetail);
-  dom.panelHandle.addEventListener('click', () => togglePanelExpanded());
+  dom.panelHandle.addEventListener('click', () => {
+    stepSheet(currentSheetState() === 'expanded' ? -2 : 1);
+  });
 
   let dragStartY = null;
   dom.panelHandle.addEventListener('touchstart', (e) => {
@@ -948,13 +1038,13 @@ function wireEvents() {
   dom.panelHandle.addEventListener('touchend', (e) => {
     if (dragStartY == null) return;
     const dy = e.changedTouches[0].clientY - dragStartY;
-    if (Math.abs(dy) > 24) togglePanelExpanded(dy < 0);
+    if (Math.abs(dy) > 24) stepSheet(dy < 0 ? 1 : -1);
     dragStartY = null;
   });
 
   window.addEventListener('resize', () => {
     refreshMapSize();
-    if (!isPhoneLayout()) dom.feedPanel.classList.remove('expanded');
+    if (!isPhoneLayout()) setSheetState('default');
   });
   dom.profileBtn.addEventListener('click', openOnboarding);
   dom.resetDataBtn.addEventListener('click', resetLocalData);
@@ -1081,6 +1171,8 @@ function main() {
 
   wireEvents();
   dom.radiusValue.textContent = formatRadiusLabel(state.radius);
+  // On a phone the map is the point; the list waits at the bottom until it is asked for.
+  setSheetState(isPhoneLayout() ? 'peek' : 'default');
 
   let lastKnown = FALLBACK_POS;
   try {
