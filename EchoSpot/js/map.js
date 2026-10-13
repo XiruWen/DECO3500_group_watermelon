@@ -94,6 +94,14 @@ export function renderEchoes(echoes, playingId) {
   }
 }
 
-export function flyToEcho(echo) {
-  if (map) map.flyTo([echo.lat, echo.lng], Math.max(map.getZoom(), 17), { duration: 0.6 });
+// bottomInset: pixels hidden behind the bottom sheet, so the pin lands in the visible half
+export function flyToEcho(echo, bottomInset = 0) {
+  if (!map) return;
+  const zoom = Math.max(map.getZoom(), 17);
+  const target = map.project([echo.lat, echo.lng], zoom).subtract([0, bottomInset / 2]);
+  map.flyTo(map.unproject(target, zoom), zoom, { duration: 0.6 });
+}
+
+export function refreshMapSize() {
+  if (map) map.invalidateSize({ animate: false });
 }
