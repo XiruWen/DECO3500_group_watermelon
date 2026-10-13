@@ -1,7 +1,7 @@
 import { putEcho, getAllEchoes, countEchoes, clearAllEchoes } from './idb.js';
 import { distanceMeters, randomPointNear, formatDistance, formatTimeAgo, watchLocation } from './geo.js';
 import { synthDemoAudioBlob } from './synth.js';
-import { initMap, onEchoClick, onMapClick, setUserPosition, panTo, renderEchoes, flyToEcho } from './map.js';
+import { initMap, onEchoClick, onMapClick, setUserPosition, panTo, renderEchoes, flyToEcho, refreshMapSize } from './map.js';
 
 const FALLBACK_POS = { lat: -27.4698, lng: 153.0251 }; // used when geolocation fails (default: Brisbane City, Australia)
 const AVATARS = ['🙂', '😎', '🥸', '🐱', '🐼', '🦊', '🐧', '👾', '🌈', '🎈'];
@@ -125,7 +125,12 @@ const dom = {
   detailProgress: el('detailProgress'),
   detailContext: el('detailContext'),
   detailContextText: el('detailContextText'),
+  feedPanel: el('feedPanel'),
+  panelHandle: el('panelHandle'),
   lockedHint: el('lockedHint'),
+  lockedHintText: el('lockedHintText'),
+  takeMeThereBtn: el('takeMeThereBtn'),
+  previewTag: el('previewTag'),
   reactionBar: el('reactionBar'),
   replyBtn: el('replyBtn'),
   replyInputArea: el('replyInputArea'),
@@ -387,8 +392,10 @@ function refresh() {
   state.currentList = list;
   renderFeedList(list);
   renderEchoes(list, state.currentPlayingId);
+  if (!dom.detailModal.classList.contains('hidden')) updateDetailLockState();
   const note = state.geoFallbackNote ? ` · ${state.geoFallbackNote}` : '';
-  dom.statusLine.textContent = `${list.length} echo${list.length === 1 ? '' : 'es'} within ${formatRadiusLabel(state.radius)}${note}`;
+  const playable = list.filter((e) => e.url || e.dist <= UNLOCK_DISTANCE).length;
+  dom.statusLine.textContent = `${list.length} echo${list.length === 1 ? '' : 'es'} within ${formatRadiusLabel(state.radius)} · ${playable} playable here${note}`;
 }
 
 function renderFeedList(list) {
@@ -403,20 +410,25 @@ function renderFeedList(list) {
       const unlocked = echo.dist != null && echo.dist <= UNLOCK_DISTANCE;
       const isLink = !!echo.url;
       const durationStr = echo.duration ? formatMMSS(echo.duration) : (isLink ? 'link' : '');
+      const status = isLink
+        ? `<span class="echo-status link">↗ opens in ${escapeHtml(detectService(echo.url))}</span>`
+        : unlocked
+          ? '<span class="echo-status open">🔓 you are here · full echo</span>'
+          : `<span class="echo-status locked">🔒 ${PREVIEW_SECONDS} s preview · walk ${formatDistance(echo.dist - UNLOCK_DISTANCE)} to unlock</span>`;
       return `
-      <li class="echo-item ${playing ? 'playing' : ''}" data-id="${echo.id}">
-        <button class="echo-play-btn" aria-label="Play">${playing ? '⏸' : '▶'}</button>
+      <li class="echo-item ${playing ? 'playing' : ''} ${!unlocked && !isLink ? 'locked' : ''}" data-id="${echo.id}">
+        <button class="echo-play-btn ${!unlocked && !isLink ? 'preview' : ''}" aria-label="${isLink ? 'Open link' : unlocked ? 'Play' : `Play ${PREVIEW_SECONDS} second preview`}">${playing ? '⏸' : '▶'}</button>
         <div class="echo-info">
           <div class="echo-title-row">
             <span class="echo-mood">${echo.mood}</span>
             <span class="echo-title">${escapeHtml(echo.title)}</span>
-            ${!unlocked && !isLink ? '<span title="Walk within 50 m to unlock">🔒</span>' : ''}
           </div>
           <div class="echo-meta">
             <span class="type-pill">${type.icon} ${type.label}</span>
             ${durationStr ? `<span class="duration-badge">${durationStr}</span> · ` : ''}
             ${echo.avatar} ${escapeHtml(echo.nickname)} · ${formatTimeAgo(echo.createdAt)} · ${formatDistance(echo.dist)}
           </div>
+          ${status}
         </div>
         <div class="echo-likes">▶ ${echo.plays || 0} · ${echo.likes || 0}</div>
       </li>`;
@@ -560,7 +572,6 @@ function openDetail(id) {
   dom.detailTime.textContent = formatTimeAgo(echo.createdAt);
   dom.detailPlayCount.textContent = `▶ ${echo.plays || 0}`;
   const dist = state.position ? distanceMeters(state.position, echo) : null;
-  dom.detailDistance.textContent = dist != null ? `${formatDistance(dist)} away` : '';
   const isLink = !!echo.url;
   dom.detailPlayer.classList.toggle('hidden', isLink);
   dom.detailLinkArea.classList.toggle('hidden', !isLink);
@@ -570,8 +581,7 @@ function openDetail(id) {
   }
   dom.detailContext.classList.toggle('hidden', !echo.context);
   dom.detailContextText.textContent = echo.context || '';
-  const unlocked = dist != null && dist <= UNLOCK_DISTANCE;
-  dom.lockedHint.classList.toggle('hidden', isLink || unlocked);
+  updateDetailLockState();
   dom.detailProgress.style.width = state.currentPlayingId === id ? dom.detailProgress.style.width : '0%';
   updateReactionUI(echo);
   renderReplies(echo);
@@ -579,7 +589,50 @@ function openDetail(id) {
   dom.replyInput.value = '';
   dom.detailPlayBtn.textContent = state.currentPlayingId === id ? '⏸' : '▶';
   dom.detailModal.classList.remove('hidden');
-  flyToEcho(echo);
+  flyToEcho(echo, bottomSheetInset());
+}
+
+// Keeps the card honest while the person walks: how far is left, what pressing play will
+// actually give them, and a way to get there.
+function updateDetailLockState() {
+  const echo = state.echoes.find((e) => e.id === state.detailEchoId);
+  if (!echo) return;
+  const dist = state.position ? distanceMeters(state.position, echo) : null;
+  const isLink = !!echo.url;
+  const unlocked = dist != null && dist <= UNLOCK_DISTANCE;
+
+  dom.detailDistance.textContent =
+    dist == null
+      ? 'Waiting for your location…'
+      : unlocked
+        ? `🔓 ${formatDistance(dist)} away — you are standing where it was left`
+        : `🔒 ${formatDistance(dist)} away — unlocks within ${UNLOCK_DISTANCE} m`;
+  dom.detailDistance.classList.toggle('locked', !unlocked && !isLink);
+
+  const locked = !isLink && !unlocked;
+  dom.lockedHint.classList.toggle('hidden', !locked);
+  if (locked) {
+    dom.lockedHintText.textContent =
+      dist == null
+        ? `Full echo unlocks within ${UNLOCK_DISTANCE} m of this spot`
+        : `${PREVIEW_SECONDS} s preview from here · walk ${formatDistance(Math.max(dist - UNLOCK_DISTANCE, 0))} for the full echo`;
+  }
+  dom.previewTag.classList.toggle('hidden', !locked);
+  dom.detailPlayBtn.classList.toggle('preview', locked);
+  dom.detailPlayBtn.setAttribute(
+    'aria-label',
+    locked ? `Play ${PREVIEW_SECONDS} second preview` : 'Play'
+  );
+}
+
+function openDirectionsToDetail() {
+  const echo = state.echoes.find((e) => e.id === state.detailEchoId);
+  if (!echo) return;
+  window.open(
+    `https://www.google.com/maps/dir/?api=1&destination=${echo.lat},${echo.lng}`,
+    '_blank',
+    'noopener,noreferrer'
+  );
 }
 
 async function addReaction(reaction) {
@@ -867,8 +920,42 @@ function toggleMenu(show) {
   dom.menuBtn.setAttribute('aria-expanded', String(open));
 }
 
+// ---------- Bottom sheet (phones) ----------
+function isPhoneLayout() {
+  return window.matchMedia('(max-width: 720px)').matches;
+}
+
+function bottomSheetInset() {
+  return isPhoneLayout() ? dom.feedPanel.getBoundingClientRect().height : 0;
+}
+
+function togglePanelExpanded(force) {
+  const expanded = typeof force === 'boolean' ? force : !dom.feedPanel.classList.contains('expanded');
+  dom.feedPanel.classList.toggle('expanded', expanded);
+  dom.panelHandle.setAttribute('aria-expanded', String(expanded));
+  setTimeout(refreshMapSize, 260);
+}
+
 // ---------- Bootstrap ----------
 function wireEvents() {
+  dom.takeMeThereBtn.addEventListener('click', openDirectionsToDetail);
+  dom.panelHandle.addEventListener('click', () => togglePanelExpanded());
+
+  let dragStartY = null;
+  dom.panelHandle.addEventListener('touchstart', (e) => {
+    dragStartY = e.touches[0].clientY;
+  }, { passive: true });
+  dom.panelHandle.addEventListener('touchend', (e) => {
+    if (dragStartY == null) return;
+    const dy = e.changedTouches[0].clientY - dragStartY;
+    if (Math.abs(dy) > 24) togglePanelExpanded(dy < 0);
+    dragStartY = null;
+  });
+
+  window.addEventListener('resize', () => {
+    refreshMapSize();
+    if (!isPhoneLayout()) dom.feedPanel.classList.remove('expanded');
+  });
   dom.profileBtn.addEventListener('click', openOnboarding);
   dom.resetDataBtn.addEventListener('click', resetLocalData);
   dom.menuResetBtn.addEventListener('click', resetLocalData);
@@ -937,7 +1024,7 @@ function wireEvents() {
   dom.detailLocateBtn.addEventListener('click', () => {
     dom.detailModal.classList.add('hidden');
     const echo = state.echoes.find((e) => e.id === state.detailEchoId);
-    if (echo) flyToEcho(echo);
+    if (echo) flyToEcho(echo, bottomSheetInset());
   });
   dom.detailTrack.addEventListener('click', (e) => {
     if (state.currentPlayingId !== state.detailEchoId || !dom.audioPlayer.duration) return;

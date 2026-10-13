@@ -7,7 +7,10 @@ let onEchoClickCb = null;
 let onMapClickCb = null;
 
 export function initMap(containerId, center) {
-  map = L.map(containerId, { zoomControl: false }).setView([center.lat, center.lng], 16);
+  // Opens tight on where you are standing. You can zoom out a little to see what is around the
+  // corner, but not far enough to browse the city — being here is the point of the concept.
+  map = L.map(containerId, { zoomControl: false, minZoom: 15, maxZoom: 19 })
+    .setView([center.lat, center.lng], 18);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap',
@@ -94,6 +97,14 @@ export function renderEchoes(echoes, playingId) {
   }
 }
 
-export function flyToEcho(echo) {
-  if (map) map.flyTo([echo.lat, echo.lng], Math.max(map.getZoom(), 17), { duration: 0.6 });
+// bottomInset: pixels hidden behind the bottom sheet, so the pin lands in the visible half
+export function flyToEcho(echo, bottomInset = 0) {
+  if (!map) return;
+  const zoom = Math.max(map.getZoom(), 17);
+  const target = map.project([echo.lat, echo.lng], zoom).subtract([0, bottomInset / 2]);
+  map.flyTo(map.unproject(target, zoom), zoom, { duration: 0.6 });
+}
+
+export function refreshMapSize() {
+  if (map) map.invalidateSize({ animate: false });
 }
