@@ -79,6 +79,20 @@ const dom = {
   echoList: el('echoList'),
   dropBtn: el('dropBtn'),
   recenterBtn: el('recenterBtn'),
+  layout: el('layout'),
+  screenMap: el('screenMap'),
+  screenYou: el('screenYou'),
+  youStats: el('youStats'),
+  youList: el('youList'),
+  youSettingsBtn: el('youSettingsBtn'),
+  tabbar: el('tabbar'),
+  youToggleBtn: el('youToggleBtn'),
+  tabDropBtn: el('tabDropBtn'),
+  tabMoreBtn: el('tabMoreBtn'),
+  tabNearbyBadge: el('tabNearbyBadge'),
+  placeThread: el('placeThread'),
+  placeThreadLabel: el('placeThreadLabel'),
+  placeThreadList: el('placeThreadList'),
 
   onboardModal: el('onboardModal'),
   onboardName: el('onboardName'),
@@ -151,6 +165,7 @@ const state = {
   testMode: false,
   ready: false,
   toppedUp: false,
+  screen: 'map',
   geoFallbackNote: '',
   radius: Number(dom.radiusRange.value),
   echoes: [],
@@ -443,6 +458,9 @@ function refresh() {
   dom.peekCount.textContent = list.length
     ? `${list.length} nearby · ${playable} playable`
     : 'nothing within range';
+  dom.tabNearbyBadge.textContent = String(playable);
+  dom.tabNearbyBadge.classList.toggle('hidden', playable === 0);
+  if (state.screen === 'you') renderYou();
 }
 
 function renderFeedList(list) {
@@ -650,6 +668,7 @@ function openDetail(id) {
   dom.detailContext.classList.toggle('hidden', !echo.context);
   dom.detailContextText.textContent = echo.context || '';
   updateDetailLockState();
+  renderPlaceThread(echo);
   dom.detailProgress.style.width = state.currentPlayingId === id ? dom.detailProgress.style.width : '0%';
   updateReactionUI(echo);
   renderReplies(echo);
@@ -995,18 +1014,122 @@ function toggleMenu(show) {
   dom.menuBtn.setAttribute('aria-expanded', String(open));
 }
 
+// ---------- Screens (phone tab bar) ----------
+const SCREENS = { map: 'screenMap', nearby: 'feedPanel', you: 'screenYou' };
+
+function showScreen(name) {
+  if (!SCREENS[name]) return;
+  state.screen = name;
+  Object.entries(SCREENS).forEach(([key, id]) => {
+    el(id).classList.toggle('active', key === name);
+  });
+  [...dom.tabbar.querySelectorAll('.tab[data-screen]')].forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.screen === name);
+  });
+  if (name === 'map') setTimeout(refreshMapSize, 60);
+  if (name === 'you') renderYou();
+}
+
+// ---------- You ----------
+function myEchoes() {
+  return state.echoes
+    .filter((e) => !e.isDemo)
+    .sort((a, b) => b.createdAt - a.createdAt);
+}
+
+function renderYou() {
+  const mine = myEchoes();
+  const plays = mine.reduce((n, e) => n + (e.plays || 0), 0);
+  const answers = mine.reduce(
+    (n, e) => n + (e.replies || []).filter((r) => r.nickname !== state.profile?.nickname).length,
+    0
+  );
+  dom.youStats.innerHTML = `
+    <div class="stat"><b>${mine.length}</b><span>left</span></div>
+    <div class="stat"><b>${plays}</b><span>plays</span></div>
+    <div class="stat"><b>${answers}</b><span>answers</span></div>`;
+
+  if (!mine.length) {
+    dom.youList.innerHTML = `<li class="empty-hint">
+      You have not left an echo yet. Find a place that holds a song for you, and leave it there.
+      <button class="widen-btn" id="youDropBtn">Leave one here</button></li>`;
+    const b = el('youDropBtn');
+    if (b) b.addEventListener('click', openDropModal);
+    return;
+  }
+
+  dom.youList.innerHTML = mine
+    .map((echo) => {
+      const type = AUDIO_TYPES.find((t) => t.key === echo.audioType) || AUDIO_TYPES[4];
+      const answers_ = (echo.replies || []).filter((r) => r.nickname !== state.profile?.nickname);
+      const dist = state.position ? distanceMeters(state.position, { lat: echo.lat, lng: echo.lng }) : null;
+      const back = answers_.length
+        ? `<div class="echo-status open">💬 ${answers_.length} answered · last: ${escapeHtml(
+            answers_[answers_.length - 1].text || 'a track'
+          )}</div>`
+        : `<div class="echo-status locked">no answers yet · ${echo.plays || 0} ${
+            (echo.plays || 0) === 1 ? 'play' : 'plays'
+          }</div>`;
+      return `
+      <li class="echo-item" data-id="${echo.id}">
+        <div class="echo-avatar">${echo.mood}</div>
+        <div class="echo-info">
+          <div class="echo-title-row"><span class="echo-title">${escapeHtml(echo.title)}</span></div>
+          <div class="echo-meta">
+            <span class="type-pill">${type.icon} ${type.label}</span>
+            ${formatTimeAgo(echo.createdAt)}${dist != null ? ` · ${formatDistance(dist)} away` : ''}
+          </div>
+          ${back}
+        </div>
+      </li>`;
+    })
+    .join('');
+}
+
+// ---------- Echoes sharing one spot ----------
+const SAME_SPOT_M = 60;
+
+function renderPlaceThread(echo) {
+  const others = state.echoes
+    .filter((e) => e.id !== echo.id)
+    .map((e) => ({ ...e, d: distanceMeters({ lat: echo.lat, lng: echo.lng }, { lat: e.lat, lng: e.lng }) }))
+    .filter((e) => e.d <= SAME_SPOT_M)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 6);
+
+  dom.placeThread.classList.toggle('hidden', others.length === 0);
+  if (!others.length) return;
+  dom.placeThreadLabel.textContent = `Also left at this spot · ${others.length}`;
+  dom.placeThreadList.innerHTML = others
+    .map(
+      (e) => `
+      <button class="spot-chip" data-id="${e.id}">
+        <span class="spot-chip-mood">${e.mood}</span>
+        <span class="spot-chip-title">${escapeHtml(e.title)}</span>
+        <span class="spot-chip-meta">${escapeHtml(e.nickname)} · ${formatTimeAgo(e.createdAt)}</span>
+      </button>`
+    )
+    .join('');
+}
+
 // ---------- Bottom sheet (phones) ----------
 function isPhoneLayout() {
   return window.matchMedia('(max-width: 720px)').matches;
 }
 
 function bottomSheetInset() {
-  return isPhoneLayout() ? dom.feedPanel.getBoundingClientRect().height : 0;
+  // On a phone the list has its own screen; only the tab bar covers the map.
+  return isPhoneLayout() ? dom.tabbar.getBoundingClientRect().height : 0;
 }
 
 const SHEET_STATES = ['peek', 'default', 'expanded'];
 
 function setSheetState(next) {
+  if (isPhoneLayout()) {
+    dom.feedPanel.classList.remove('peek', 'expanded');
+    dom.feedPanel.dataset.sheet = 'screen';
+    return;
+  }
   const state_ = SHEET_STATES.includes(next) ? next : 'default';
   dom.feedPanel.classList.remove('peek', 'expanded');
   if (state_ !== 'default') dom.feedPanel.classList.add(state_);
@@ -1028,6 +1151,30 @@ function stepSheet(direction) {
 // ---------- Bootstrap ----------
 function wireEvents() {
   dom.takeMeThereBtn.addEventListener('click', openDirectionsToDetail);
+  [...dom.tabbar.querySelectorAll('.tab[data-screen]')].forEach((tab) => {
+    tab.addEventListener('click', () => showScreen(tab.dataset.screen));
+  });
+  dom.tabDropBtn.addEventListener('click', openDropModal);
+  dom.tabMoreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+  dom.youSettingsBtn.addEventListener('click', () => toggleMenu(true));
+  dom.youToggleBtn.addEventListener('click', () => {
+    showScreen(state.screen === 'you' ? 'nearby' : 'you');
+    dom.youToggleBtn.classList.toggle('active', state.screen === 'you');
+  });
+
+  dom.youList.addEventListener('click', (e) => {
+    const li = e.target.closest('.echo-item');
+    if (li) openDetail(li.dataset.id);
+  });
+
+  dom.placeThreadList.addEventListener('click', (e) => {
+    const chip = e.target.closest('.spot-chip');
+    if (chip) openDetail(chip.dataset.id);
+  });
+
   dom.panelHandle.addEventListener('click', () => {
     stepSheet(currentSheetState() === 'expanded' ? -2 : 1);
   });
@@ -1181,8 +1328,8 @@ function main() {
 
   wireEvents();
   dom.radiusValue.textContent = formatRadiusLabel(state.radius);
-  // On a phone the map is the point; the list waits at the bottom until it is asked for.
-  setSheetState(isPhoneLayout() ? 'peek' : 'default');
+  setSheetState('default');
+  showScreen('map');
 
   let lastKnown = FALLBACK_POS;
   try {
