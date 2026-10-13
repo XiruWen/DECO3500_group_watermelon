@@ -16,6 +16,7 @@
       <div class="brand">🎧 EchoSpot <span class="brand-sub">Leave your sound where you stand</span></div>
       <div class="topbar-actions">
         <button id="profileBtn" class="chip-btn"><span id="profileAvatar">🙂</span><span id="profileName">Me</span></button>
+        <button id="youToggleBtn" class="chip-btn desktop-only">👤 Your echoes</button>
         <div class="topbar-menu">
           <button id="menuBtn" class="chip-btn menu-toggle" aria-haspopup="true" aria-expanded="false">☰ Menu</button>
           <div class="menu-dropdown" id="menuDropdown" role="menu">
@@ -28,25 +29,45 @@
       </div>
     </header>
 
-    <main class="layout">
-      <div id="map"></div>
+    <main class="layout" id="layout">
+      <section class="screen screen-map active" id="screenMap">
+        <div id="map"></div>
+        <button id="recenterBtn" class="map-btn" title="Back to where I am" aria-label="Back to where I am">◎</button>
+        <button id="dropBtn" class="fab" title="Leave an echo here">＋</button>
+      </section>
 
-      <aside class="panel" id="feedPanel">
+      <aside class="panel screen" id="feedPanel">
         <div class="panel-handle" id="panelHandle"></div>
         <div class="panel-header">
-          <h2>Nearby Echoes <span class="peek-count" id="peekCount"></span></h2>
+          <h2>Nearby <span class="peek-count" id="peekCount"></span></h2>
           <div class="radius-control">
             <label for="radiusRange">Search radius</label>
             <input type="range" id="radiusRange" min="100" max="2000" step="100" value="300" />
-            <span id="radiusValue">1.0 km</span>
+            <span id="radiusValue">300 m</span>
           </div>
         </div>
         <div class="status-line" id="statusLine">Locating…</div>
         <ul class="echo-list" id="echoList"></ul>
       </aside>
 
-      <button id="dropBtn" class="fab" title="Leave an echo here">＋</button>
+      <section class="screen screen-you" id="screenYou">
+        <div class="panel-header">
+          <h2>You</h2>
+          <button id="youSettingsBtn" class="ghost-chip">⚙︎ Settings</button>
+        </div>
+        <div class="you-stats" id="youStats"></div>
+        <div class="section-label">Echoes you left</div>
+        <ul class="echo-list" id="youList"></ul>
+      </section>
     </main>
+
+    <nav class="tabbar" id="tabbar">
+      <button class="tab active" data-screen="map"><span class="tab-ico">🗺</span><span class="tab-label">Map</span></button>
+      <button class="tab" data-screen="nearby"><span class="tab-ico">📍</span><span class="tab-label">Nearby</span><span class="tab-badge hidden" id="tabNearbyBadge"></span></button>
+      <button class="tab tab-drop" id="tabDropBtn" aria-label="Leave an echo here">＋</button>
+      <button class="tab" data-screen="you"><span class="tab-ico">👤</span><span class="tab-label">You</span></button>
+      <button class="tab" id="tabMoreBtn"><span class="tab-ico">☰</span><span class="tab-label">More</span></button>
+    </nav>
 
     <!-- First-time onboarding: set nickname & avatar -->
     <div class="modal-overlay hidden" id="onboardModal">
@@ -157,6 +178,10 @@
         <div class="detail-context hidden" id="detailContext">
           <div class="detail-context-label">Why it was left here</div>
           <div id="detailContextText"></div>
+        </div>
+        <div class="place-thread hidden" id="placeThread">
+          <div class="section-label" id="placeThreadLabel">Also left at this spot</div>
+          <div class="place-thread-list" id="placeThreadList"></div>
         </div>
         <div class="reaction-bar" id="reactionBar">
           <button class="reaction-btn" data-reaction="❤️">❤️ <span id="reactHeartCount">0</span></button>
