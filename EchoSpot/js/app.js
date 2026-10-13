@@ -78,6 +78,7 @@ const dom = {
   statusLine: el('statusLine'),
   echoList: el('echoList'),
   dropBtn: el('dropBtn'),
+  recenterBtn: el('recenterBtn'),
 
   onboardModal: el('onboardModal'),
   onboardName: el('onboardName'),
@@ -913,7 +914,7 @@ function handlePositionUpdate(pos, meta) {
   if (!dom.dropModal.classList.contains('hidden')) updateDropLocationInfo();
   if (first) {
     ensureReady(pos).then(() => {
-      panTo(pos);
+      panTo(pos, bottomSheetInset(), 18);
       syncUserMarker();
       refresh();
     });
@@ -1067,6 +1068,15 @@ function wireEvents() {
   });
 
   dom.dropBtn.addEventListener('click', openDropModal);
+
+  dom.recenterBtn.addEventListener('click', () => {
+    if (!state.position) {
+      showToast('Still waiting for your location');
+      return;
+    }
+    panTo(state.position, bottomSheetInset(), 18);
+    syncUserMarker();
+  });
   dom.dropClose.addEventListener('click', closeDropModal);
   dom.dropModal.addEventListener('click', (e) => {
     if (e.target === dom.dropModal) closeDropModal();

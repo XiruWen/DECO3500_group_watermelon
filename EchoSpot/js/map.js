@@ -9,7 +9,7 @@ let onMapClickCb = null;
 export function initMap(containerId, center) {
   // Opens tight on where you are standing. You can zoom out a little to see what is around the
   // corner, but not far enough to browse the city — being here is the point of the concept.
-  map = L.map(containerId, { zoomControl: false, minZoom: 15, maxZoom: 19 })
+  map = L.map(containerId, { zoomControl: false, minZoom: 16, maxZoom: 19 })
     .setView([center.lat, center.lng], 18);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -62,8 +62,11 @@ export function setUserPosition(pos, radiusMeters) {
   }
 }
 
-export function panTo(pos) {
-  if (map) map.setView([pos.lat, pos.lng]);
+export function panTo(pos, bottomInset = 0, zoom) {
+  if (!map) return;
+  const z = zoom || Math.max(map.getZoom(), 17);
+  const target = map.project([pos.lat, pos.lng], z).subtract([0, bottomInset / 2]);
+  map.setView(map.unproject(target, z), z);
 }
 
 // echoes: list already filtered by radius; playingId: id of the echo currently playing (highlighted)
