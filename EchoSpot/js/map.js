@@ -7,7 +7,10 @@ let onEchoClickCb = null;
 let onMapClickCb = null;
 
 export function initMap(containerId, center) {
-  map = L.map(containerId, { zoomControl: false }).setView([center.lat, center.lng], 16);
+  // Opens tight on where you are standing. You can zoom out a little to see what is around the
+  // corner, but not far enough to browse the city — being here is the point of the concept.
+  map = L.map(containerId, { zoomControl: false, minZoom: 15, maxZoom: 19 })
+    .setView([center.lat, center.lng], 18);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap',
