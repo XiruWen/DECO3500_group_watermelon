@@ -16,6 +16,13 @@
       <div class="brand">🎧 EchoSpot <span class="brand-sub">Leave your sound where you stand</span></div>
       <div class="topbar-actions">
         <button id="profileBtn" class="chip-btn"><span id="profileAvatar">🙂</span><span id="profileName">Me</span></button>
+        <div class="topbar-menu">
+          <button id="menuBtn" class="chip-btn menu-toggle" aria-haspopup="true" aria-expanded="false">☰ Menu</button>
+          <div class="menu-dropdown" id="menuDropdown" role="menu">
+            <button id="menuTestModeBtn" class="menu-item" role="menuitem">🧭 Simulate location: off</button>
+            <button id="menuResetBtn" class="menu-item" role="menuitem">🗑️ Reset data</button>
+          </div>
+        </div>
         <button id="testModeBtn" class="chip-btn" title="No location access? Turn this on, then click anywhere on the map to simulate your position">🧭 Simulate location: off</button>
         <button id="resetDataBtn" class="chip-btn" title="Clear all local EchoSpot data (profile, likes, demo echoes) and start fresh">🗑️ Reset data</button>
       </div>
@@ -30,7 +37,7 @@
           <h2>Nearby Echoes</h2>
           <div class="radius-control">
             <label for="radiusRange">Search radius</label>
-            <input type="range" id="radiusRange" min="100" max="5000" step="100" value="1000" />
+            <input type="range" id="radiusRange" min="100" max="2000" step="100" value="1000" />
             <span id="radiusValue">1.0 km</span>
           </div>
         </div>
@@ -68,6 +75,7 @@
         <div class="tabs">
           <button class="tab-btn active" data-tab="upload" type="button">Upload audio</button>
           <button class="tab-btn" data-tab="record" type="button">Record live</button>
+          <button class="tab-btn" data-tab="link" type="button">Paste link</button>
         </div>
 
         <div class="tab-panel" id="tabUpload">
@@ -83,11 +91,29 @@
           <audio id="recordPreview" controls class="hidden"></audio>
         </div>
 
+        <div class="tab-panel hidden" id="tabLink">
+          <div class="link-input">
+            <input type="text" id="dropLink" placeholder="https://open.spotify.com/track/..." />
+            <p class="link-hint">Paste a Spotify, YouTube or SoundCloud link. EchoSpot will open it externally — we don't host copyrighted audio.</p>
+          </div>
+        </div>
+
         <label class="field-label">Title</label>
         <input type="text" id="dropTitle" maxlength="30" placeholder="Give this echo a name" />
 
+        <label class="field-label">This is a...</label>
+        <div class="type-picker" id="dropTypePicker"></div>
+
         <label class="field-label">Mood / type</label>
         <div class="emoji-picker" id="dropMoodPicker"></div>
+
+        <label class="field-label">Why I left it here</label>
+        <textarea id="dropContext" maxlength="140" placeholder="One line about why this belongs to this place..."></textarea>
+
+        <label class="consent-row" id="dropConsentRow">
+          <input type="checkbox" id="dropConsent" />
+          <span>I confirm this is my own recording or I have permission to share it.</span>
+        </label>
 
         <div class="drop-location" id="dropLocationInfo">Will be dropped at: locating…</div>
 
@@ -103,21 +129,42 @@
           <button class="icon-btn" id="detailClose">✕</button>
         </div>
         <div class="detail-meta">
+          <span id="detailType" class="type-pill hidden"></span>
+          <span id="detailDuration" class="duration-badge hidden"></span>
           <span id="detailGenre" class="genre-pill hidden"></span>
           <span id="detailAvatar">🙂</span>
           <span id="detailNickname">Nickname</span>
           <span class="dot">·</span>
           <span id="detailTime">just now</span>
+          <span class="dot">·</span>
+          <span id="detailPlayCount" class="play-count">▶ 0</span>
         </div>
         <div class="detail-distance" id="detailDistance"></div>
-        <div class="player">
+        <div class="player" id="detailPlayer">
           <button id="detailPlayBtn" class="play-btn">▶</button>
           <div class="player-track" id="detailTrack">
             <div class="player-progress" id="detailProgress"></div>
           </div>
         </div>
+        <div id="detailLinkArea" class="hidden">
+          <a id="detailLinkBtn" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn" style="text-align:center;display:block;text-decoration:none;margin-top:16px;">Open on Spotify/YouTube</a>
+        </div>
+        <div class="detail-context hidden" id="detailContext">
+          <div class="detail-context-label">Why it was left here</div>
+          <div id="detailContextText"></div>
+        </div>
+        <div class="locked-hint hidden" id="lockedHint">🔒 Walk within 50 m to hear the full echo</div>
+        <div class="reaction-bar" id="reactionBar">
+          <button class="reaction-btn" data-reaction="❤️">❤️ <span id="reactHeartCount">0</span></button>
+          <button class="reaction-btn" data-reaction="🔥">🔥 <span id="reactFireCount">0</span></button>
+          <button class="reaction-btn" data-reaction="🎧">🎧 <span id="reactHeadphonesCount">0</span></button>
+          <button class="reply-btn" id="replyBtn">💬 Reply</button>
+        </div>
+        <div class="hidden" id="replyInputArea">
+          <input type="text" id="replyInput" maxlength="80" placeholder="Reply without contacting them..." />
+        </div>
+        <div class="reply-list hidden" id="replyList"></div>
         <div class="detail-actions">
-          <button id="detailLikeBtn" class="like-btn"><span id="detailLikeIcon">🤍</span> <span id="detailLikeCount">0</span></button>
           <button id="detailLocateBtn" class="ghost-btn">📍 View on map</button>
         </div>
       </div>

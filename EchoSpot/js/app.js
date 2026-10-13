@@ -6,6 +6,15 @@ import { initMap, onEchoClick, onMapClick, setUserPosition, panTo, renderEchoes,
 const FALLBACK_POS = { lat: -27.4698, lng: 153.0251 }; // used when geolocation fails (default: Brisbane City, Australia)
 const AVATARS = ['🙂', '😎', '🥸', '🐱', '🐼', '🦊', '🐧', '👾', '🌈', '🎈'];
 const MOODS = ['🎸', '🎹', '🎤', '🎧', '🌊', '🌙', '✨', '🥁', '🔥'];
+const AUDIO_TYPES = [
+  { key: 'song', label: 'Song', icon: '🎵' },
+  { key: 'hum', label: 'Hum', icon: '🎤' },
+  { key: 'voice', label: 'Voice', icon: '🗣️' },
+  { key: 'field', label: 'Field rec', icon: '🎙️' },
+  { key: 'other', label: 'Other', icon: '✨' },
+];
+const UNLOCK_DISTANCE = 50; // metres — full playback only within this range
+const PREVIEW_SECONDS = 9; // short preview when outside unlock range
 
 const DEMO_PERSONAS = [
   { nickname: 'Night Breeze', avatar: '🌙' },
@@ -60,6 +69,10 @@ const dom = {
   profileName: el('profileName'),
   testModeBtn: el('testModeBtn'),
   resetDataBtn: el('resetDataBtn'),
+  menuBtn: el('menuBtn'),
+  menuDropdown: el('menuDropdown'),
+  menuTestModeBtn: el('menuTestModeBtn'),
+  menuResetBtn: el('menuResetBtn'),
   radiusRange: el('radiusRange'),
   radiusValue: el('radiusValue'),
   statusLine: el('statusLine'),
@@ -76,31 +89,48 @@ const dom = {
   tabButtons: document.querySelectorAll('.tab-btn'),
   tabUpload: el('tabUpload'),
   tabRecord: el('tabRecord'),
+  tabLink: el('tabLink'),
   fileInput: el('fileInput'),
   fileHint: el('fileHint'),
   fileDropLabel: el('fileDropLabel'),
+  dropLink: el('dropLink'),
   recordBtn: el('recordBtn'),
   recordTime: el('recordTime'),
   recordPreview: el('recordPreview'),
   dropTitle: el('dropTitle'),
+  dropTypePicker: el('dropTypePicker'),
   dropMoodPicker: el('dropMoodPicker'),
+  dropContext: el('dropContext'),
+  dropConsent: el('dropConsent'),
+  dropConsentRow: el('dropConsentRow'),
   dropLocationInfo: el('dropLocationInfo'),
   dropSubmit: el('dropSubmit'),
 
   detailModal: el('detailModal'),
   detailClose: el('detailClose'),
   detailTitle: el('detailTitle'),
+  detailType: el('detailType'),
+  detailDuration: el('detailDuration'),
   detailGenre: el('detailGenre'),
   detailAvatar: el('detailAvatar'),
   detailNickname: el('detailNickname'),
   detailTime: el('detailTime'),
+  detailPlayCount: el('detailPlayCount'),
   detailDistance: el('detailDistance'),
+  detailPlayer: el('detailPlayer'),
   detailPlayBtn: el('detailPlayBtn'),
+  detailLinkArea: el('detailLinkArea'),
+  detailLinkBtn: el('detailLinkBtn'),
   detailTrack: el('detailTrack'),
   detailProgress: el('detailProgress'),
-  detailLikeBtn: el('detailLikeBtn'),
-  detailLikeIcon: el('detailLikeIcon'),
-  detailLikeCount: el('detailLikeCount'),
+  detailContext: el('detailContext'),
+  detailContextText: el('detailContextText'),
+  lockedHint: el('lockedHint'),
+  reactionBar: el('reactionBar'),
+  replyBtn: el('replyBtn'),
+  replyInputArea: el('replyInputArea'),
+  replyInput: el('replyInput'),
+  replyList: el('replyList'),
   detailLocateBtn: el('detailLocateBtn'),
 
   audioPlayer: el('audioPlayer'),
@@ -121,11 +151,12 @@ const state = {
   audioUrlCache: new Map(),
   likedIds: new Set(JSON.parse(localStorage.getItem('echospot-liked') || '[]')),
   detailEchoId: null,
-  drop: { mood: MOODS[0], fileBlob: null },
+  drop: { mood: MOODS[0], audioType: 'song', fileBlob: null, url: '', context: '', consent: false },
   recorder: null,
   recordStream: null,
   recordTimerId: null,
   recordSeconds: 0,
+  previewTimerId: null,
 };
 
 function escapeHtml(str) {
@@ -149,7 +180,75 @@ function uid() {
   return (crypto.randomUUID && crypto.randomUUID()) || `e-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// ---------- Avatar / mood picker ----------
+function normalizeEcho(echo) {
+  return {
+    ...echo,
+    audioType: echo.audioType || 'other',
+    context: echo.context || '',
+    url: echo.url || '',
+    consent: !!echo.consent,
+    plays: echo.plays || 0,
+    likes: echo.likes || 0,
+    replies: Array.isArray(echo.replies) ? echo.replies : [],
+  };
+}
+
+function isValidUrl(str) {
+  try {
+    const url = new URL(str);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function detectService(url) {
+  try {
+    const host = new URL(url).hostname;
+    if (host.includes('spotify')) return 'Spotify';
+    if (host.includes('youtube') || host.includes('youtu.be')) return 'YouTube';
+    if (host.includes('soundcloud')) return 'SoundCloud';
+    return 'link';
+  } catch {
+    return 'link';
+  }
+}
+
+function mapGenreToType(genre) {
+  const g = (genre || '').toLowerCase();
+  if (g.includes('vocal') || g.includes('a cappella') || g.includes('ballad') || g.includes('pop') || g.includes('rock') || g.includes('indie') || g.includes('jazz') || g.includes('funk') || g.includes('synth') || g.includes('house') || g.includes('drum & bass') || g.includes('trap') || g.includes('chillhop') || g.includes('cinematic') || g.includes('post-rock') || g.includes('dream pop') || g.includes('ethereal') || g.includes('marching')) return 'song';
+  if (g.includes('field') || g.includes('ambient') || g.includes('drone') || g.includes('recording')) return 'field';
+  if (g.includes('hum')) return 'hum';
+  return 'other';
+}
+
+// ---------- Audio duration helper ----------
+function getAudioDuration(blob) {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    let settled = false;
+    const cleanup = () => {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+    };
+    audio.addEventListener('loadedmetadata', () => {
+      cleanup();
+      resolve(Math.round(audio.duration || 0));
+    });
+    audio.addEventListener('error', () => {
+      cleanup();
+      resolve(0);
+    });
+    setTimeout(() => {
+      cleanup();
+      resolve(0);
+    }, 3000);
+  });
+}
+
+// ---------- Pickers ----------
 function buildEmojiPicker(container, options, selected, onSelect) {
   container.innerHTML = '';
   options.forEach((opt) => {
@@ -161,6 +260,22 @@ function buildEmojiPicker(container, options, selected, onSelect) {
       container.querySelectorAll('.emoji-btn').forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
       onSelect(opt);
+    });
+    container.appendChild(btn);
+  });
+}
+
+function buildTypePicker(container, selected, onSelect) {
+  container.innerHTML = '';
+  AUDIO_TYPES.forEach((type) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'type-btn' + (type.key === selected ? ' active' : '');
+    btn.innerHTML = `<span>${type.icon}</span>${type.label}`;
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.type-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      onSelect(type.key);
     });
     container.appendChild(btn);
   });
@@ -204,11 +319,18 @@ async function ensureSeedData(center) {
       title: seed.title,
       mood: seed.mood,
       genre: seed.genre,
+      audioType: mapGenreToType(seed.genre),
+      context: '',
       nickname: persona.nickname,
       avatar: persona.avatar,
       createdAt: Date.now() - Math.floor(Math.random() * 5 * 86400000),
       likes: Math.floor(Math.random() * 20),
+      plays: Math.floor(Math.random() * 50),
+      replies: [],
       audioBlob,
+      url: '',
+      duration: Math.round(5 + Math.random() * 3),
+      consent: true,
       isDemo: true,
     };
     await putEcho(echo);
@@ -219,7 +341,35 @@ async function ensureReady(center) {
   if (state.ready) return;
   state.ready = true;
   await ensureSeedData(center);
-  state.echoes = await getAllEchoes();
+  state.echoes = (await getAllEchoes()).map(normalizeEcho);
+  migrateOldLikes();
+}
+
+// Migrate "likedIds" from older versions into explicit heart reactions
+function migrateOldLikes() {
+  if (!state.profile) return;
+  const toSave = [];
+  state.echoes.forEach((echo) => {
+    if (!state.likedIds.has(echo.id)) return;
+    const hasMine = echo.replies.some((r) => r.type === 'reaction' && r.text === '❤️' && r.nickname === state.profile.nickname);
+    if (!hasMine) {
+      echo.replies.push({
+        id: uid(),
+        type: 'reaction',
+        text: '❤️',
+        nickname: state.profile.nickname,
+        avatar: state.profile.avatar,
+        createdAt: Date.now(),
+      });
+      echo.likes += 1;
+      toSave.push(echo);
+    }
+  });
+  if (toSave.length) {
+    toSave.forEach((e) => putEcho(e));
+    localStorage.removeItem('echospot-liked');
+    state.likedIds.clear();
+  }
 }
 
 // ---------- Map & list sync ----------
@@ -249,7 +399,10 @@ function renderFeedList(list) {
   dom.echoList.innerHTML = list
     .map((echo) => {
       const playing = echo.id === state.currentPlayingId;
-      const liked = state.likedIds.has(echo.id);
+      const type = AUDIO_TYPES.find((t) => t.key === echo.audioType) || AUDIO_TYPES[4];
+      const unlocked = echo.dist != null && echo.dist <= UNLOCK_DISTANCE;
+      const isLink = !!echo.url;
+      const durationStr = echo.duration ? formatMMSS(echo.duration) : (isLink ? 'link' : '');
       return `
       <li class="echo-item ${playing ? 'playing' : ''}" data-id="${echo.id}">
         <button class="echo-play-btn" aria-label="Play">${playing ? '⏸' : '▶'}</button>
@@ -257,10 +410,15 @@ function renderFeedList(list) {
           <div class="echo-title-row">
             <span class="echo-mood">${echo.mood}</span>
             <span class="echo-title">${escapeHtml(echo.title)}</span>
+            ${!unlocked && !isLink ? '<span title="Walk within 50 m to unlock">🔒</span>' : ''}
           </div>
-          <div class="echo-meta">${echo.genre ? `<span class="genre-pill">${escapeHtml(echo.genre)}</span> · ` : ''}${echo.avatar} ${escapeHtml(echo.nickname)} · ${formatTimeAgo(echo.createdAt)} · ${formatDistance(echo.dist)}</div>
+          <div class="echo-meta">
+            <span class="type-pill">${type.icon} ${type.label}</span>
+            ${durationStr ? `<span class="duration-badge">${durationStr}</span> · ` : ''}
+            ${echo.avatar} ${escapeHtml(echo.nickname)} · ${formatTimeAgo(echo.createdAt)} · ${formatDistance(echo.dist)}
+          </div>
         </div>
-        <div class="echo-likes">${liked ? '❤️' : '🤍'} ${echo.likes || 0}</div>
+        <div class="echo-likes">▶ ${echo.plays || 0} · ${echo.likes || 0}</div>
       </li>`;
     })
     .join('');
@@ -282,20 +440,55 @@ function getAudioUrl(echo) {
   return url;
 }
 
+async function incrementPlays(echo) {
+  echo.plays = (echo.plays || 0) + 1;
+  await putEcho(echo);
+  dom.detailPlayCount.textContent = `▶ ${echo.plays}`;
+  refresh();
+}
+
 async function playEcho(id) {
   const echo = state.echoes.find((e) => e.id === id);
   if (!echo) return;
   if (state.currentPlayingId === id) {
     dom.audioPlayer.pause();
     state.currentPlayingId = null;
+    clearTimeout(state.previewTimerId);
+    state.previewTimerId = null;
     syncPlaybackUI();
     return;
   }
+  clearTimeout(state.previewTimerId);
+  state.previewTimerId = null;
+
+  const dist = state.position ? distanceMeters(state.position, echo) : 0;
+  const isLink = !!echo.url;
+
+  // Streaming links open externally; we do not host copyrighted audio
+  if (isLink) {
+    incrementPlays(echo);
+    window.open(echo.url, '_blank', 'noopener,noreferrer');
+    showToast(`Opening ${detectService(echo.url)}…`);
+    syncPlaybackUI();
+    return;
+  }
+
+  const unlocked = dist <= UNLOCK_DISTANCE;
   try {
     dom.audioPlayer.src = getAudioUrl(echo);
     dom.audioPlayer.currentTime = 0;
     await dom.audioPlayer.play();
     state.currentPlayingId = id;
+    if (unlocked) {
+      incrementPlays(echo);
+    } else {
+      state.previewTimerId = setTimeout(() => {
+        dom.audioPlayer.pause();
+        state.currentPlayingId = null;
+        syncPlaybackUI();
+        showToast('Walk within 50 m to hear the full echo');
+      }, PREVIEW_SECONDS * 1000);
+    }
   } catch (err) {
     console.error(err);
     showToast('Playback failed, please try again');
@@ -314,10 +507,39 @@ function updateDetailProgress() {
 }
 
 // ---------- Detail card ----------
-function updateDetailLikeUI(echo) {
-  const liked = state.likedIds.has(echo.id);
-  dom.detailLikeIcon.textContent = liked ? '❤️' : '🤍';
-  dom.detailLikeCount.textContent = echo.likes || 0;
+function updateReactionUI(echo) {
+  const counts = {};
+  (echo.replies || []).forEach((r) => {
+    if (r.type === 'reaction') counts[r.text] = (counts[r.text] || 0) + 1;
+  });
+  dom.reactionBar.querySelectorAll('.reaction-btn').forEach((btn) => {
+    const r = btn.dataset.reaction;
+    const count = counts[r] || 0;
+    btn.querySelector('span').textContent = count;
+    const mine = state.profile && (echo.replies || []).some((rep) => rep.type === 'reaction' && rep.text === r && rep.nickname === state.profile.nickname);
+    btn.classList.toggle('reacted', mine);
+  });
+}
+
+function renderReplies(echo) {
+  const textReplies = (echo.replies || []).filter((r) => r.type === 'text').sort((a, b) => b.createdAt - a.createdAt);
+  dom.replyList.classList.toggle('hidden', textReplies.length === 0);
+  if (textReplies.length === 0) {
+    dom.replyList.innerHTML = '';
+    return;
+  }
+  dom.replyList.innerHTML = textReplies
+    .map(
+      (r) => `
+    <div class="reply-item">
+      <span class="reply-avatar">${escapeHtml(r.avatar)}</span>
+      <div class="reply-body">
+        <div class="reply-text">${escapeHtml(r.text)}</div>
+        <div class="reply-meta">${escapeHtml(r.nickname)} · ${formatTimeAgo(r.createdAt)}</div>
+      </div>
+    </div>`
+    )
+    .join('');
 }
 
 function openDetail(id) {
@@ -325,34 +547,83 @@ function openDetail(id) {
   if (!echo) return;
   state.detailEchoId = id;
   dom.detailTitle.textContent = echo.title;
+  const type = AUDIO_TYPES.find((t) => t.key === echo.audioType) || AUDIO_TYPES[4];
+  dom.detailType.textContent = `${type.icon} ${type.label}`;
+  dom.detailType.classList.toggle('hidden', false);
+  const durationStr = echo.duration ? formatMMSS(echo.duration) : '';
+  dom.detailDuration.textContent = durationStr;
+  dom.detailDuration.classList.toggle('hidden', !durationStr);
   dom.detailGenre.textContent = echo.genre || '';
   dom.detailGenre.classList.toggle('hidden', !echo.genre);
   dom.detailAvatar.textContent = echo.avatar;
   dom.detailNickname.textContent = echo.nickname;
   dom.detailTime.textContent = formatTimeAgo(echo.createdAt);
+  dom.detailPlayCount.textContent = `▶ ${echo.plays || 0}`;
   const dist = state.position ? distanceMeters(state.position, echo) : null;
   dom.detailDistance.textContent = dist != null ? `${formatDistance(dist)} away` : '';
+  const isLink = !!echo.url;
+  dom.detailPlayer.classList.toggle('hidden', isLink);
+  dom.detailLinkArea.classList.toggle('hidden', !isLink);
+  if (isLink) {
+    dom.detailLinkBtn.href = echo.url;
+    dom.detailLinkBtn.textContent = `Open ${detectService(echo.url)}`;
+  }
+  dom.detailContext.classList.toggle('hidden', !echo.context);
+  dom.detailContextText.textContent = echo.context || '';
+  const unlocked = dist != null && dist <= UNLOCK_DISTANCE;
+  dom.lockedHint.classList.toggle('hidden', isLink || unlocked);
   dom.detailProgress.style.width = state.currentPlayingId === id ? dom.detailProgress.style.width : '0%';
-  updateDetailLikeUI(echo);
+  updateReactionUI(echo);
+  renderReplies(echo);
+  dom.replyInputArea.classList.add('hidden');
+  dom.replyInput.value = '';
   dom.detailPlayBtn.textContent = state.currentPlayingId === id ? '⏸' : '▶';
   dom.detailModal.classList.remove('hidden');
   flyToEcho(echo);
 }
 
-async function toggleLike(id) {
-  const echo = state.echoes.find((e) => e.id === id);
-  if (!echo) return;
-  if (state.likedIds.has(id)) {
-    state.likedIds.delete(id);
-    echo.likes = Math.max(0, (echo.likes || 0) - 1);
-  } else {
-    state.likedIds.add(id);
-    echo.likes = (echo.likes || 0) + 1;
+async function addReaction(reaction) {
+  const echo = state.echoes.find((e) => e.id === state.detailEchoId);
+  if (!echo || !state.profile) return;
+  const existing = echo.replies.find((r) => r.type === 'reaction' && r.nickname === state.profile.nickname);
+  const hadHeart = existing?.text === '❤️';
+  const willHeart = reaction === '❤️';
+  // remove current user's existing reaction
+  echo.replies = echo.replies.filter((r) => !(r.type === 'reaction' && r.nickname === state.profile.nickname));
+  // if not toggling off, push the new one
+  if (!existing || existing.text !== reaction) {
+    echo.replies.push({
+      id: uid(),
+      type: 'reaction',
+      text: reaction,
+      nickname: state.profile.nickname,
+      avatar: state.profile.avatar,
+      createdAt: Date.now(),
+    });
   }
-  localStorage.setItem('echospot-liked', JSON.stringify([...state.likedIds]));
+  // update like count based on heart transitions
+  if (hadHeart && !willHeart) echo.likes = Math.max(0, (echo.likes || 0) - 1);
+  if (!hadHeart && willHeart) echo.likes = (echo.likes || 0) + 1;
   await putEcho(echo);
-  updateDetailLikeUI(echo);
-  renderFeedList(state.currentList);
+  updateReactionUI(echo);
+  refresh();
+}
+
+async function addReply(text) {
+  const echo = state.echoes.find((e) => e.id === state.detailEchoId);
+  if (!echo || !state.profile || !text.trim()) return;
+  echo.replies.push({
+    id: uid(),
+    type: 'text',
+    text: text.trim(),
+    nickname: state.profile.nickname,
+    avatar: state.profile.avatar,
+    createdAt: Date.now(),
+  });
+  await putEcho(echo);
+  renderReplies(echo);
+  refresh();
+  showToast('Reply left 👋');
 }
 
 // ---------- Dropping an echo ----------
@@ -365,7 +636,12 @@ function updateDropLocationInfo() {
 }
 
 function validateDropForm() {
-  dom.dropSubmit.disabled = !(state.drop.fileBlob && state.position);
+  const tab = [...dom.tabButtons].find((b) => b.classList.contains('active'))?.dataset.tab || 'upload';
+  let hasContent = false;
+  if (tab === 'upload' || tab === 'record') hasContent = !!state.drop.fileBlob;
+  else if (tab === 'link') hasContent = isValidUrl(state.drop.url);
+  const consentOk = tab === 'link' || state.drop.consent;
+  dom.dropSubmit.disabled = !(hasContent && state.position && consentOk);
 }
 
 function resetRecordUI() {
@@ -380,15 +656,24 @@ function resetRecordUI() {
 }
 
 function openDropModal() {
-  state.drop = { mood: MOODS[0], fileBlob: null };
+  state.drop = { mood: MOODS[0], audioType: 'song', fileBlob: null, url: '', context: '', consent: false };
   dom.dropTitle.value = '';
+  dom.dropContext.value = '';
+  dom.dropLink.value = '';
+  dom.dropConsent.checked = false;
   dom.fileHint.textContent = 'Click to choose an audio file';
   dom.fileInput.value = '';
   resetRecordUI();
+  buildTypePicker(dom.dropTypePicker, state.drop.audioType, (v) => {
+    state.drop.audioType = v;
+    validateDropForm();
+  });
   buildEmojiPicker(dom.dropMoodPicker, MOODS, state.drop.mood, (v) => (state.drop.mood = v));
   dom.tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === 'upload'));
   dom.tabUpload.classList.remove('hidden');
   dom.tabRecord.classList.add('hidden');
+  dom.tabLink.classList.add('hidden');
+  dom.dropConsentRow.classList.remove('hidden');
   updateDropLocationInfo();
   validateDropForm();
   dom.dropModal.classList.remove('hidden');
@@ -407,7 +692,21 @@ function closeDropModal() {
 }
 
 async function handleDropSubmit() {
-  if (!state.drop.fileBlob || !state.position) return;
+  if (!state.position) return;
+  const tab = [...dom.tabButtons].find((b) => b.classList.contains('active'))?.dataset.tab || 'upload';
+  let audioBlob = null;
+  let url = '';
+  let duration = 0;
+
+  if (tab === 'link') {
+    url = state.drop.url.trim();
+    if (!isValidUrl(url)) return;
+  } else {
+    audioBlob = state.drop.fileBlob;
+    if (!audioBlob) return;
+    duration = await getAudioDuration(audioBlob);
+  }
+
   const id = uid();
   const echo = {
     id,
@@ -415,11 +714,19 @@ async function handleDropSubmit() {
     lng: state.position.lng,
     title: dom.dropTitle.value.trim() || 'Untitled echo',
     mood: state.drop.mood,
+    audioType: state.drop.audioType,
+    context: dom.dropContext.value.trim(),
+    genre: '',
     nickname: state.profile.nickname,
     avatar: state.profile.avatar,
     createdAt: Date.now(),
     likes: 0,
-    audioBlob: state.drop.fileBlob,
+    plays: 0,
+    replies: [],
+    audioBlob,
+    url,
+    duration,
+    consent: state.drop.consent,
     isDemo: false,
   };
   await putEcho(echo);
@@ -515,11 +822,13 @@ async function resetLocalData() {
     resetArmed = true;
     dom.resetDataBtn.textContent = '⚠️ Click again to confirm';
     dom.resetDataBtn.classList.add('danger-armed');
+    dom.menuResetBtn.textContent = '⚠️ Click again to confirm';
     clearTimeout(resetArmedTimer);
     resetArmedTimer = setTimeout(() => {
       resetArmed = false;
       dom.resetDataBtn.textContent = '🗑️ Reset data';
       dom.resetDataBtn.classList.remove('danger-armed');
+      dom.menuResetBtn.textContent = '🗑️ Reset data';
     }, 4000);
     return;
   }
@@ -531,24 +840,47 @@ async function resetLocalData() {
   location.reload();
 }
 
+// ---------- Menu & test mode ----------
+function updateTestModeUI() {
+  const label = state.testMode ? '🧭 Simulate location: on' : '🧭 Simulate location: off';
+  dom.testModeBtn.textContent = label;
+  dom.menuTestModeBtn.textContent = label;
+  dom.testModeBtn.classList.toggle('active', state.testMode);
+}
+
+function toggleTestMode() {
+  state.testMode = !state.testMode;
+  updateTestModeUI();
+  if (state.testMode) {
+    showToast('Simulate location on: click anywhere on the map to set your position');
+  } else if (state.realPosition) {
+    state.position = state.realPosition;
+    syncUserMarker();
+    refresh();
+    showToast('Back to using your real location');
+  }
+}
+
+function toggleMenu(show) {
+  const open = typeof show === 'boolean' ? show : !dom.menuDropdown.classList.contains('open');
+  dom.menuDropdown.classList.toggle('open', open);
+  dom.menuBtn.setAttribute('aria-expanded', String(open));
+}
+
 // ---------- Bootstrap ----------
 function wireEvents() {
   dom.profileBtn.addEventListener('click', openOnboarding);
   dom.resetDataBtn.addEventListener('click', resetLocalData);
+  dom.menuResetBtn.addEventListener('click', resetLocalData);
 
-  dom.testModeBtn.addEventListener('click', () => {
-    state.testMode = !state.testMode;
-    dom.testModeBtn.textContent = state.testMode ? '🧭 Simulate location: on' : '🧭 Simulate location: off';
-    dom.testModeBtn.classList.toggle('active', state.testMode);
-    if (state.testMode) {
-      showToast('Simulate location on: click anywhere on the map to set your position');
-    } else if (state.realPosition) {
-      state.position = state.realPosition;
-      syncUserMarker();
-      refresh();
-      showToast('Back to using your real location');
-    }
+  dom.menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
   });
+  document.addEventListener('click', () => toggleMenu(false));
+
+  dom.testModeBtn.addEventListener('click', toggleTestMode);
+  dom.menuTestModeBtn.addEventListener('click', toggleTestMode);
 
   dom.radiusRange.addEventListener('input', () => {
     state.radius = Number(dom.radiusRange.value);
@@ -568,9 +900,12 @@ function wireEvents() {
     btn.addEventListener('click', () => {
       dom.tabButtons.forEach((b) => b.classList.remove('active'));
       btn.classList.add('active');
-      const isUpload = btn.dataset.tab === 'upload';
-      dom.tabUpload.classList.toggle('hidden', !isUpload);
-      dom.tabRecord.classList.toggle('hidden', isUpload);
+      const tab = btn.dataset.tab;
+      dom.tabUpload.classList.toggle('hidden', tab !== 'upload');
+      dom.tabRecord.classList.toggle('hidden', tab !== 'record');
+      dom.tabLink.classList.toggle('hidden', tab !== 'link');
+      dom.dropConsentRow.classList.toggle('hidden', tab === 'link');
+      validateDropForm();
     });
   });
 
@@ -582,6 +917,16 @@ function wireEvents() {
     validateDropForm();
   });
 
+  dom.dropLink.addEventListener('input', () => {
+    state.drop.url = dom.dropLink.value;
+    validateDropForm();
+  });
+
+  dom.dropConsent.addEventListener('change', () => {
+    state.drop.consent = dom.dropConsent.checked;
+    validateDropForm();
+  });
+
   dom.recordBtn.addEventListener('click', toggleRecording);
 
   dom.detailClose.addEventListener('click', () => dom.detailModal.classList.add('hidden'));
@@ -589,7 +934,6 @@ function wireEvents() {
     if (e.target === dom.detailModal) dom.detailModal.classList.add('hidden');
   });
   dom.detailPlayBtn.addEventListener('click', () => playEcho(state.detailEchoId));
-  dom.detailLikeBtn.addEventListener('click', () => toggleLike(state.detailEchoId));
   dom.detailLocateBtn.addEventListener('click', () => {
     dom.detailModal.classList.add('hidden');
     const echo = state.echoes.find((e) => e.id === state.detailEchoId);
@@ -600,6 +944,24 @@ function wireEvents() {
     const rect = dom.detailTrack.getBoundingClientRect();
     const ratio = (e.clientX - rect.left) / rect.width;
     dom.audioPlayer.currentTime = ratio * dom.audioPlayer.duration;
+  });
+
+  dom.reactionBar.addEventListener('click', (e) => {
+    const btn = e.target.closest('.reaction-btn');
+    if (!btn) return;
+    addReaction(btn.dataset.reaction);
+  });
+
+  dom.replyBtn.addEventListener('click', () => {
+    dom.replyInputArea.classList.toggle('hidden');
+    if (!dom.replyInputArea.classList.contains('hidden')) dom.replyInput.focus();
+  });
+  dom.replyInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      addReply(dom.replyInput.value);
+      dom.replyInput.value = '';
+      dom.replyInputArea.classList.add('hidden');
+    }
   });
 
   dom.echoList.addEventListener('click', (e) => {
@@ -615,6 +977,8 @@ function wireEvents() {
 
   dom.audioPlayer.addEventListener('ended', () => {
     state.currentPlayingId = null;
+    clearTimeout(state.previewTimerId);
+    state.previewTimerId = null;
     syncPlaybackUI();
   });
   dom.audioPlayer.addEventListener('timeupdate', updateDetailProgress);
