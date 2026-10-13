@@ -18,46 +18,68 @@ already happens.
 
 | What | Where |
 |---|---|
-| **Prototype** | [`EchoSpot/`](EchoSpot/) — see [Running the prototype](#running-the-prototype) |
+| **Prototype — live** | <https://xiruwen.github.io/DECO3500_group_watermelon/EchoSpot/> (works on a phone; no login) |
+| **Prototype — source** | [`EchoSpot/`](EchoSpot/) — see [Running the prototype](#running-the-prototype) |
+| **Prototype changelog** | [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Prototype-changelog) — what changed between versions, and why |
+| **Evaluation** | [`evaluation/`](evaluation/) — round 1 findings and the round 2 plan |
 | **Design Process Overview** | [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Design-Process-Overview) |
 | **Ethical Considerations** | [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Ethical-Considerations) |
 | **Stand-up records** | [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Stand%E2%80%90up-records) |
-| **Task board** | GitHub Projects *(to be set up)* |
-| Poster & promotional material | *(Week 12)* |
+| **Task board** | GitHub Projects *(not set up)* |
+| Poster & promotional material | A2 conference poster — tradeshow, Week 12 |
 | Team Charter | [`Watermelon_Charter.pdf`](Watermelon_Charter.pdf) |
 
 ---
 
 ## Running the prototype
 
-EchoSpot v1 is a static web app. There is **no login** — on first launch you pick a
-nickname and an avatar, and that is all.
+EchoSpot is a static web app — no build step, no backend, **no login**. On first launch you
+pick a nickname and an avatar, and that is all.
 
-**Run locally** (the app uses ES modules, so opening `index.html` directly will not work):
+**Use the deployed version** (recommended, and the only way to get real GPS on a phone —
+browsers only hand out location over HTTPS):
+<https://xiruwen.github.io/DECO3500_group_watermelon/EchoSpot/>
+
+**Or run it locally** (ES modules, so opening `index.html` from the file system will not work):
 
 ```bash
 cd EchoSpot
 python3 -m http.server 8765
 ```
 
-Then open <http://localhost:8765> in a browser.
+Then open <http://localhost:8765>.
 
-**Using it**
+### The one rule
 
-- Allow location access when asked. If you cannot (or are testing away from campus),
-  click **Simulate location**, then click anywhere on the map to set your position.
-- **＋** leaves an echo at your current position (record live or choose an audio file).
-- **Nearby Echoes** lists echoes within the search radius; tap one to play or like it.
-- **Reset data** clears everything stored by the app in this browser.
+An echo is **visible from anywhere, but only plays within 50 m of where it was left**.
+Further away you get a nine-second preview and a line telling you how far is left to walk.
+The search radius slider changes what you can *see*; it never changes what you can *hear*.
 
-**Known limitations (v1)**
+### Getting around
 
-- All data is stored **in the current browser only** (IndexedDB). Echoes left on one
-  device are not visible on another yet, so multi-user testing currently happens on a
-  single device.
-- Demo echoes are generated locally with synthesised audio.
+On a phone the app is a bottom tab bar:
 
----
+| Tab | What it does |
+|---|---|
+| **Map** | Where you are and the echoes around you. The ◎ button returns to your position. |
+| **Nearby** | Every echo within the search radius, closest first, each with its lock state. The badge counts the ones playable from where you stand. |
+| **＋** | Leave an echo: attach a streaming link, record live, or choose an audio file. Add the audio type and one line on why you left it here. |
+| **You** | The echoes you left, how many times they were played, and what came back. |
+| **More** | Simulate location, reset data. |
+
+On a laptop the list stays as a side panel and the header carries the same controls.
+
+**Testing without going outside:** More → **Simulate location**, then tap the map to stand
+there. Walking into and out of the 50 m ring is the thing worth testing.
+
+**What is simulated, and what is real**
+
+- Real: location, the 50 m unlock rule, recording, leaving and finding echoes, replies.
+- Simulated: the demo echoes are generated locally, with synthesised audio and invented
+  nicknames, so the map is never empty. They are clustered around wherever you open the app.
+- Not built yet: echoes are stored **in this browser only** (IndexedDB), so two devices do
+  not see each other's echoes. Multi-user interaction is demonstrated by handing one device
+  over, and shared storage is the next piece of work.
 
 ## Repository map
 
@@ -71,8 +93,12 @@ design/
   prototype-plan.md        Plan of work, selection criteria, content rights
 interviews/
   interview-guide.md       Question criteria, core questions, probes, analysis method
+  user-research-findings.md  Synthesis across the interviews
   Interview_Transcript*    De-identified transcripts with coding tables
-  Interview_Notes*         Interviewer notes (paraphrased, not verbatim)
+evaluation/
+  test-plan.md             Round 2 plan: paired sessions, two devices
+  findings.md              Round 1 findings, evidence and the changes they forced
+  Prototype_Test_*.md      Session records, reconstructed from field notes
 literature/
   _TEMPLATE_paper-critique.md
   <name>_<paper-slug>.md   Paper critiques (~400 words each)
@@ -111,9 +137,10 @@ the **WIKI**.
 | Team Charter | ✅ [`Watermelon_Charter.pdf`](Watermelon_Charter.pdf) |
 | Design Proposal presentation | ✅ delivered Week 5 |
 | Literature critiques | 🔄 in progress — [`literature/`](literature/) |
-| Interviews | 🔄 1 transcript + 1 set of interviewer notes — [`interviews/`](interviews/) |
-| Prototype | 🔄 v1 — [`EchoSpot/`](EchoSpot/) |
+| Interviews | ✅ 14 transcripts + synthesis — [`interviews/`](interviews/) |
+| Prototype | 🔄 v3, deployed — [live](https://xiruwen.github.io/DECO3500_group_watermelon/EchoSpot/) · [`EchoSpot/`](EchoSpot/) |
+| Evaluation | ✅ round 1 (6 in-situ sessions) — [`evaluation/`](evaluation/) · round 2 planned |
 | Stand-up WIKI page (Week 9) | 🔄 records from Week 3 — [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Stand%E2%80%90up-records) |
-| Ethical Considerations (WIKI) | ⬜ |
+| Ethical Considerations (WIKI) | ✅ [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Ethical-Considerations) |
 | Design Process Overview (WIKI) | ⬜ |
-| Poster & pitch (Week 12) | ⬜ |
+| Poster & pitch (Week 12) | 🔄 A2 poster drafted, pitch to rehearse |
