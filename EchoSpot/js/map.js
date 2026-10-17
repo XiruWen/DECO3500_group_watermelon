@@ -32,7 +32,7 @@ export function onMapClick(cb) {
   onMapClickCb = cb;
 }
 
-// radiusMeters is only used to draw the "search radius" reference circle; it never affects playback
+// radiusMeters draws the listening ring around the person (the 50 m an echo must be within to play)
 export function setUserPosition(pos, radiusMeters) {
   const latlng = [pos.lat, pos.lng];
   if (!userMarker) {
@@ -69,7 +69,7 @@ export function panTo(pos, bottomInset = 0, zoom) {
   map.setView(map.unproject(target, z), z);
 }
 
-// echoes: list already filtered by radius; playingId: id of the echo currently playing (highlighted)
+// echoes: every echo, shown on the map wherever it is; playingId: the echo currently playing (highlighted)
 export function renderEchoes(echoes, playingId) {
   const seen = new Set();
   echoes.forEach((echo) => {

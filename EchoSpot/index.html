@@ -40,11 +40,6 @@
         <div class="panel-handle" id="panelHandle"></div>
         <div class="panel-header">
           <h2>Nearby <span class="peek-count" id="peekCount"></span></h2>
-          <div class="radius-control">
-            <label for="radiusRange">Search radius</label>
-            <input type="range" id="radiusRange" min="100" max="2000" step="100" value="300" />
-            <span id="radiusValue">300 m</span>
-          </div>
         </div>
         <div class="status-line" id="statusLine">Locating…</div>
         <ul class="echo-list" id="echoList"></ul>
@@ -162,7 +157,7 @@
         </div>
         <div class="detail-distance" id="detailDistance"></div>
         <div class="locked-hint hidden" id="lockedHint">
-          <span class="locked-hint-text" id="lockedHintText">Walk within 50 m to hear the full echo</span>
+          <span class="locked-hint-text" id="lockedHintText">Echoes only play within 50 m of the spot they were left</span>
           <button class="locked-hint-go" id="takeMeThereBtn">🧭 Take me there</button>
         </div>
         <div class="player" id="detailPlayer">
@@ -170,7 +165,6 @@
           <div class="player-track" id="detailTrack">
             <div class="player-progress" id="detailProgress"></div>
           </div>
-          <span class="preview-tag hidden" id="previewTag">9 s preview</span>
         </div>
         <div id="detailLinkArea" class="hidden">
           <a id="detailLinkBtn" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn" style="text-align:center;display:block;text-decoration:none;margin-top:16px;">Open on Spotify/YouTube</a>

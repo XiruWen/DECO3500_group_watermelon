@@ -182,20 +182,6 @@ html, body {
   font-size: 16px;
 }
 
-.radius-control {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--text-dim);
-}
-.radius-control label { white-space: nowrap; }
-.radius-control input[type="range"] {
-  flex: 1;
-  accent-color: var(--accent);
-}
-.radius-control span { min-width: 52px; text-align: right; color: var(--text); }
-
 .status-line {
   padding: 10px 18px;
   font-size: 12px;
@@ -871,21 +857,16 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .echo-status.open { color: var(--accent-2, #5eead4); font-weight: 600; }
 .echo-status.link { color: #c4b5fd; }
 .echo-item.locked .echo-title { opacity: .85; }
-.echo-play-btn.preview {
+.echo-play-btn.is-locked {
   background: transparent;
   border: 1px solid var(--border);
   color: #9aa3ba;
 }
-.play-btn.preview {
+.play-btn.is-locked {
   background: transparent;
   border: 1.5px solid var(--border);
   color: #c7cde0;
   box-shadow: none;
-}
-.preview-tag {
-  font-size: 11px;
-  color: #9aa3ba;
-  white-space: nowrap;
 }
 .detail-distance.locked { color: #9aa3ba; }
 .locked-hint {
@@ -978,7 +959,6 @@ textarea:focus { outline: none; border-color: var(--accent); }
   }
   .reaction-bar { flex-wrap: wrap; gap: 8px; }
   .reaction-btn, .reply-btn, .ghost-btn, .primary-btn { min-height: 44px; }
-  .radius-control { gap: 8px; }
 }
 
 @media (max-width: 480px) {
@@ -1012,7 +992,6 @@ textarea:focus { outline: none; border-color: var(--accent); }
     height: auto;
     max-height: none;
   }
-  .panel.peek .radius-control,
   .panel.peek .status-line,
   .panel.peek .echo-list { display: none; }
   .panel.peek .panel-header { padding-bottom: 12px; }
@@ -1246,9 +1225,6 @@ body { -webkit-tap-highlight-color: transparent; }
   }
   .panel-header h2 { font-size: 20px; }
   .peek-count { display: inline; font-size: 12px; font-weight: 500; color: var(--text-2); margin-left: 8px; }
-  .radius-control { width: 100%; display: flex; align-items: center; gap: 10px; }
-  .radius-control label { font-size: 11px; color: var(--text-2); white-space: nowrap; }
-  .radius-control input[type="range"] { flex: 1; }
   .status-line { padding: 10px 16px; }
   .echo-list { padding: 4px 10px calc(16px + env(safe-area-inset-bottom, 0px)); }
 
