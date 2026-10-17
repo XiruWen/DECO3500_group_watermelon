@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>EchoSpot · Sound Echo Map</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎧</text></svg>" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">🎧 EchoSpot <span class="brand-sub">Leave your sound where you stand</span></div>
+      <div class="topbar-actions">
+        <button id="profileBtn" class="chip-btn"><span id="profileAvatar">🙂</span><span id="profileName">Me</span></button>
+        <button id="youToggleBtn" class="chip-btn desktop-only">👤 Your echoes</button>
+        <div class="topbar-menu">
+          <button id="menuBtn" class="chip-btn menu-toggle" aria-haspopup="true" aria-expanded="false">☰ Menu</button>
+          <div class="menu-dropdown" id="menuDropdown" role="menu">
+            <button id="menuTestModeBtn" class="menu-item" role="menuitem">🧭 Simulate location: off</button>
+            <button id="menuResetBtn" class="menu-item" role="menuitem">🗑️ Reset data</button>
+          </div>
+        </div>
+        <button id="testModeBtn" class="chip-btn" title="No location access? Turn this on, then click anywhere on the map to simulate your position">🧭 Simulate location: off</button>
+        <button id="resetDataBtn" class="chip-btn" title="Clear all local EchoSpot data (profile, likes, demo echoes) and start fresh">🗑️ Reset data</button>
+      </div>
+    </header>
+
+    <main class="layout" id="layout">
+      <section class="screen screen-map active" id="screenMap">
+        <div id="map"></div>
+        <button id="recenterBtn" class="map-btn" title="Back to where I am" aria-label="Back to where I am">◎</button>
+        <button id="dropBtn" class="fab" title="Leave an echo here">＋</button>
+      </section>
+
+      <aside class="panel screen" id="feedPanel">
+        <div class="panel-handle" id="panelHandle"></div>
+        <div class="panel-header">
+          <h2>Nearby <span class="peek-count" id="peekCount"></span></h2>
+        </div>
+        <div class="status-line" id="statusLine">Locating…</div>
+        <ul class="echo-list" id="echoList"></ul>
+      </aside>
+
+      <section class="screen screen-you" id="screenYou">
+        <div class="panel-header">
+          <h2>You</h2>
+          <button id="youSettingsBtn" class="ghost-chip">⚙︎ Settings</button>
+        </div>
+        <div class="you-stats" id="youStats"></div>
+        <div class="section-label">Echoes you left</div>
+        <ul class="echo-list" id="youList"></ul>
+      </section>
+    </main>
+
+    <nav class="tabbar" id="tabbar">
+      <button class="tab active" data-screen="map"><span class="tab-ico">🗺</span><span class="tab-label">Map</span></button>
+      <button class="tab" data-screen="nearby"><span class="tab-ico">📍</span><span class="tab-label">Nearby</span><span class="tab-badge hidden" id="tabNearbyBadge"></span></button>
+      <button class="tab tab-drop" id="tabDropBtn" aria-label="Leave an echo here">＋</button>
+      <button class="tab" data-screen="you"><span class="tab-ico">👤</span><span class="tab-label">You</span></button>
+      <button class="tab" id="tabMoreBtn"><span class="tab-ico">☰</span><span class="tab-label">More</span></button>
+    </nav>
+
+    <!-- First-time onboarding: set nickname & avatar -->
+    <div class="modal-overlay hidden" id="onboardModal">
+      <div class="modal">
+        <h2>Welcome to EchoSpot</h2>
+        <p class="modal-desc">
+          Leave a song or a moment's feeling at every place you visit — anyone who passes by later can find it on the map and choose whether to play it.
+          <br /><br />
+          Everything is saved right here in your own browser. "Nearby Echoes" also includes a few locally-generated demo echoes so you can try it out right away.
+        </p>
+        <label class="field-label">Pick a nickname</label>
+        <input type="text" id="onboardName" maxlength="12" placeholder="e.g. Night Wanderer" />
+        <label class="field-label">Pick an avatar</label>
+        <div class="emoji-picker" id="onboardAvatarPicker"></div>
+        <button id="onboardSubmit" class="primary-btn">Start exploring</button>
+      </div>
+    </div>
+
+    <!-- Drop an echo -->
+    <div class="modal-overlay hidden" id="dropModal">
+      <div class="modal">
+        <div class="modal-title-row">
+          <h2>Leave an echo</h2>
+          <button class="icon-btn" id="dropClose">✕</button>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="upload" type="button">Upload audio</button>
+          <button class="tab-btn" data-tab="record" type="button">Record live</button>
+          <button class="tab-btn" data-tab="link" type="button">Paste link</button>
+        </div>
+
+        <div class="tab-panel" id="tabUpload">
+          <label class="file-drop" id="fileDropLabel" for="fileInput">
+            <span id="fileHint">Click to choose an audio file</span>
+          </label>
+          <input type="file" id="fileInput" accept="audio/*" class="hidden-input" />
+        </div>
+
+        <div class="tab-panel hidden" id="tabRecord">
+          <button id="recordBtn" class="record-btn" type="button">🎙️ Start recording</button>
+          <div class="record-time" id="recordTime">00:00</div>
+          <audio id="recordPreview" controls class="hidden"></audio>
+        </div>
+
+        <div class="tab-panel hidden" id="tabLink">
+          <div class="link-input">
+            <input type="text" id="dropLink" placeholder="https://open.spotify.com/track/..." />
+            <p class="link-hint">Paste a Spotify, YouTube or SoundCloud link. EchoSpot will open it externally — we don't host copyrighted audio.</p>
+          </div>
+        </div>
+
+        <label class="field-label">Title</label>
+        <input type="text" id="dropTitle" maxlength="30" placeholder="Give this echo a name" />
+
+        <label class="field-label">This is a...</label>
+        <div class="type-picker" id="dropTypePicker"></div>
+
+        <label class="field-label">Mood / type</label>
+        <div class="emoji-picker" id="dropMoodPicker"></div>
+
+        <label class="field-label">Why I left it here</label>
+        <textarea id="dropContext" maxlength="140" placeholder="One line about why this belongs to this place..."></textarea>
+
+        <label class="consent-row" id="dropConsentRow">
+          <input type="checkbox" id="dropConsent" />
+          <span>I confirm this is my own recording or I have permission to share it.</span>
+        </label>
+
+        <div class="drop-location" id="dropLocationInfo">Will be dropped at: locating…</div>
+
+        <button id="dropSubmit" class="primary-btn" disabled>Drop it here</button>
+      </div>
+    </div>
+
+    <!-- Echo detail / player card -->
+    <div class="modal-overlay hidden" id="detailModal">
+      <div class="modal">
+        <div class="modal-title-row">
+          <h2 id="detailTitle">Title</h2>
+          <button class="icon-btn" id="detailClose">✕</button>
+        </div>
+        <div class="detail-meta">
+          <span id="detailType" class="type-pill hidden"></span>
+          <span id="detailDuration" class="duration-badge hidden"></span>
+          <span id="detailGenre" class="genre-pill hidden"></span>
+          <span id="detailAvatar">🙂</span>
+          <span id="detailNickname">Nickname</span>
+          <span class="dot">·</span>
+          <span id="detailTime">just now</span>
+          <span class="dot">·</span>
+          <span id="detailPlayCount" class="play-count">▶ 0</span>
+        </div>
+        <div class="detail-distance" id="detailDistance"></div>
+        <div class="locked-hint hidden" id="lockedHint">
+          <span class="locked-hint-text" id="lockedHintText">Echoes only play within 50 m of the spot they were left</span>
+          <button class="locked-hint-go" id="takeMeThereBtn">🧭 Take me there</button>
+        </div>
+        <div class="player" id="detailPlayer">
+          <button id="detailPlayBtn" class="play-btn">▶</button>
+          <div class="player-track" id="detailTrack">
+            <div class="player-progress" id="detailProgress"></div>
+          </div>
+        </div>
+        <div id="detailLinkArea" class="hidden">
+          <a id="detailLinkBtn" href="#" target="_blank" rel="noopener noreferrer" class="primary-btn" style="text-align:center;display:block;text-decoration:none;margin-top:16px;">Open on Spotify/YouTube</a>
+        </div>
+        <div class="detail-context hidden" id="detailContext">
+          <div class="detail-context-label">Why it was left here</div>
+          <div id="detailContextText"></div>
+        </div>
+        <div class="place-thread hidden" id="placeThread">
+          <div class="section-label" id="placeThreadLabel">Also left at this spot</div>
+          <div class="place-thread-list" id="placeThreadList"></div>
+        </div>
+        <div class="reaction-bar" id="reactionBar">
+          <button class="reaction-btn" data-reaction="❤️">❤️ <span id="reactHeartCount">0</span></button>
+          <button class="reaction-btn" data-reaction="🔥">🔥 <span id="reactFireCount">0</span></button>
+          <button class="reaction-btn" data-reaction="🎧">🎧 <span id="reactHeadphonesCount">0</span></button>
+          <button class="reply-btn" id="replyBtn">💬 Reply</button>
+        </div>
+        <div class="hidden" id="replyInputArea">
+          <input type="text" id="replyInput" maxlength="80" placeholder="Reply without contacting them..." />
+        </div>
+        <div class="reply-list hidden" id="replyList"></div>
+        <div class="detail-actions">
+          <button id="detailLocateBtn" class="ghost-btn">📍 View on map</button>
+        </div>
+      </div>
+    </div>
+
+    <audio id="audioPlayer" class="hidden"></audio>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
