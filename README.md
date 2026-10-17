@@ -52,8 +52,9 @@ Then open <http://localhost:8765>.
 ### The one rule
 
 An echo is **visible from anywhere, but only plays within 50 m of where it was left**.
-Further away you get a nine-second preview and a line telling you how far is left to walk.
-The search radius slider changes what you can *see*; it never changes what you can *hear*.
+Further away it stays locked: no audio and no preview, just a line telling you how far is left
+to walk. There is no search radius. Every echo is on the map, and distance alone decides what you
+can hear. The ring around your dot on the map is the 50 m you need to be inside.
 
 ### Getting around
 
@@ -62,7 +63,7 @@ On a phone the app is a bottom tab bar:
 | Tab | What it does |
 |---|---|
 | **Map** | Where you are and the echoes around you. The ◎ button returns to your position. |
-| **Nearby** | Every echo within the search radius, closest first, each with its lock state. The badge counts the ones playable from where you stand. |
+| **Nearby** | Every echo, closest first, each with its lock state. The badge counts the ones playable from where you stand. |
 | **＋** | Leave an echo: attach a streaming link, record live, or choose an audio file. Add the audio type and one line on why you left it here. |
 | **You** | The echoes you left, how many times they were played, and what came back. |
 | **More** | Simulate location, reset data. |
@@ -76,7 +77,9 @@ there. Walking into and out of the 50 m ring is the thing worth testing.
 
 - Real: location, the 50 m unlock rule, recording, leaving and finding echoes, replies.
 - Simulated: the demo echoes are generated locally, with synthesised audio and invented
-  nicknames, so the map is never empty. They are clustered around wherever you open the app.
+  nicknames, so the map is never empty. Thirteen are placed at real UQ St Lucia spots (four each
+  in ModWest, Building 11A, and the Advanced Engineering Building, the rest around campus). If you
+  open the app somewhere else, a few more are scattered around you.
 - Not built yet: echoes are stored **in this browser only** (IndexedDB), so two devices do
   not see each other's echoes. Multi-user interaction is demonstrated by handing one device
   over, and shared storage is the next piece of work.
