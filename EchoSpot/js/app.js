@@ -3,7 +3,7 @@ import { distanceMeters, randomPointNear, formatDistance, formatTimeAgo, watchLo
 import { synthDemoAudioBlob } from './synth.js';
 import { initMap, onEchoClick, onMapClick, setUserPosition, panTo, renderEchoes, flyToEcho, refreshMapSize } from './map.js';
 
-const FALLBACK_POS = { lat: -27.4698, lng: 153.0251 }; // used when geolocation fails (default: Brisbane City, Australia)
+const FALLBACK_POS = { lat: -27.4975, lng: 153.0132 }; // used when geolocation fails (default: UQ St Lucia, Great Court)
 const AVATARS = ['🙂', '😎', '🥸', '🐱', '🐼', '🦊', '🐧', '👾', '🌈', '🎈'];
 const MOODS = ['🎸', '🎹', '🎤', '🎧', '🌊', '🌙', '✨', '🥁', '🔥'];
 const AUDIO_TYPES = [
@@ -13,8 +13,7 @@ const AUDIO_TYPES = [
   { key: 'field', label: 'Field rec', icon: '🎙️' },
   { key: 'other', label: 'Other', icon: '✨' },
 ];
-const UNLOCK_DISTANCE = 50; // metres — full playback only within this range
-const PREVIEW_SECONDS = 9; // short preview when outside unlock range
+const UNLOCK_DISTANCE = 50; // metres — an echo only plays when you are within this range of it
 
 const DEMO_PERSONAS = [
   { nickname: 'Night Breeze', avatar: '🌙' },
@@ -62,6 +61,43 @@ const DEMO_SEEDS = [
   { title: 'Thunderstorm rolling in from the west', mood: '🔥', genre: 'Post-Rock' },
 ];
 
+// Preset echoes at real UQ St Lucia spots (coordinates from OpenStreetMap). ModWest (11A) and the
+// Advanced Engineering Building (49) get several each, placed a few metres apart inside the
+// building so some are within the 50 m listening range from the doorway and some are not.
+const PRESET_ECHOES = [
+  // ModWest Building (11A) — centre -27.49592, 153.01193
+  { title: 'Atrium piano, 4pm', mood: '🎹', genre: 'Piano Ballad', lat: -27.49592, lng: 153.01193,
+    context: 'Left for anyone pulling an all-nighter in ModWest.', persona: { nickname: 'ModWest Regular', avatar: '📚' } },
+  { title: 'Waiting for the 66 bus', mood: '🎧', genre: 'Chillhop', lat: -27.49604, lng: 153.01201,
+    context: 'Mill Road entrance. The bus is always three minutes late.', persona: { nickname: 'Mill Road Mel', avatar: '🚌' } },
+  { title: 'Group-project playlist, level 2', mood: '🎸', genre: 'Indie Rock', lat: -27.49586, lng: 153.01183,
+    context: 'What we played on repeat while the report would not finish itself.', persona: { nickname: 'Team Watermelon', avatar: '🍉' } },
+  { title: 'Courtyard birds after rain', mood: '🌊', genre: 'Field Recording', lat: -27.49572, lng: 153.01208,
+    context: 'Recorded outside right after a storm. Very loud ibis.', persona: { nickname: 'Rain Chaser', avatar: '🌧️' } },
+
+  // Advanced Engineering Building (49) — centre -27.49949, 153.01517
+  { title: 'Foyer humming before the 9am lecture', mood: '🎤', genre: 'Humming', lat: -27.49949, lng: 153.01517,
+    context: 'Nervous humming. Presentation in ten minutes.', persona: { nickname: 'Eng Student', avatar: '🛠️' } },
+  { title: 'Lab corridor, 3D printer rhythm', mood: '🥁', genre: 'Percussion Jam', lat: -27.49931, lng: 153.01505,
+    context: 'Seven printers running at once makes a surprisingly good beat.', persona: { nickname: 'Print Farm', avatar: '🖨️' } },
+  { title: 'Robotics club jam', mood: '🎹', genre: 'Synthwave', lat: -27.49959, lng: 153.01531,
+    context: 'Built with leftover servo noise and one borrowed keyboard.', persona: { nickname: 'Robo Club', avatar: '🤖' } },
+  { title: 'Thesis due in three days', mood: '🌙', genre: 'Ambient', lat: -27.49971, lng: 153.01512,
+    context: 'Staff House Road side. Quiet, tired, still going.', persona: { nickname: 'Late Shift', avatar: '🌃' } },
+
+  // Around campus
+  { title: 'Jacaranda season in the Great Court', mood: '🌙', genre: 'Dream Pop', lat: -27.49745, lng: 153.01321,
+    context: 'Purple petals everywhere. Exam season arrives with them.', persona: { nickname: 'Jacaranda Jo', avatar: '🌸' } },
+  { title: 'Forgan Smith bell tower echo', mood: '✨', genre: 'Cinematic', lat: -27.49694, lng: 153.01307,
+    context: 'Stand under the sandstone arches and clap once.', persona: { nickname: 'Great Court Gus', avatar: '🏛️' } },
+  { title: 'Skate wheels past Hawken', mood: '🥁', genre: 'Percussion Jam', lat: -27.50002, lng: 153.01377,
+    context: 'The path outside Hawken has the best rattle on campus.', persona: { nickname: 'Board Kid', avatar: '🛹' } },
+  { title: 'Busker outside the Michie steps', mood: '🎸', genre: 'Acoustic Folk', lat: -27.49730, lng: 153.01181,
+    context: 'Plays here most Thursdays between lectures.', persona: { nickname: 'Thursday Busker', avatar: '🎶' } },
+  { title: 'Coffee queue mixtape', mood: '🎹', genre: 'Jazz', lat: -27.49933, lng: 153.01361,
+    context: 'Near the Liveris Building. Ten-minute wait, one very good record.', persona: { nickname: 'Flat White', avatar: '☕' } },
+];
+
 const el = (id) => document.getElementById(id);
 const dom = {
   profileBtn: el('profileBtn'),
@@ -73,8 +109,6 @@ const dom = {
   menuDropdown: el('menuDropdown'),
   menuTestModeBtn: el('menuTestModeBtn'),
   menuResetBtn: el('menuResetBtn'),
-  radiusRange: el('radiusRange'),
-  radiusValue: el('radiusValue'),
   statusLine: el('statusLine'),
   echoList: el('echoList'),
   dropBtn: el('dropBtn'),
@@ -146,7 +180,6 @@ const dom = {
   lockedHint: el('lockedHint'),
   lockedHintText: el('lockedHintText'),
   takeMeThereBtn: el('takeMeThereBtn'),
-  previewTag: el('previewTag'),
   reactionBar: el('reactionBar'),
   replyBtn: el('replyBtn'),
   replyInputArea: el('replyInputArea'),
@@ -167,7 +200,6 @@ const state = {
   toppedUp: false,
   screen: 'map',
   geoFallbackNote: '',
-  radius: Number(dom.radiusRange.value),
   echoes: [],
   currentList: [],
   currentPlayingId: null,
@@ -179,7 +211,6 @@ const state = {
   recordStream: null,
   recordTimerId: null,
   recordSeconds: 0,
-  previewTimerId: null,
 };
 
 function escapeHtml(str) {
@@ -193,10 +224,6 @@ function showToast(msg) {
   dom.toast.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => dom.toast.classList.remove('show'), 2600);
-}
-
-function formatRadiusLabel(m) {
-  return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`;
 }
 
 function uid() {
@@ -326,15 +353,13 @@ function openOnboarding() {
 }
 
 // ---------- Demo data ----------
-// Demo echoes are clustered around wherever the person opens the app: a couple at arm's reach
-// so the unlock rule can be felt immediately, the rest within a short walk. Without this the
-// map is empty wherever you happen to be standing, which reads as a broken app.
-const SEED_VERSION = 3;
-const SEED_RANGES = [[8, 30], [12, 40], [25, 48], [70, 160], [120, 280], [200, 420], [350, 700], [600, 1200]];
+// First run seeds the fixed PRESET_ECHOES at UQ St Lucia. Anyone opening the app somewhere else
+// still gets a few demo echoes scattered around them (topUpNearby) so the map never looks empty.
+const SEED_VERSION = 4;
 const TOPUP_RANGES = [[10, 35], [20, 45], [80, 200], [150, 400]];
 
 async function buildDemoEcho(seed, point) {
-  const persona = DEMO_PERSONAS[Math.floor(Math.random() * DEMO_PERSONAS.length)];
+  const persona = seed.persona || DEMO_PERSONAS[Math.floor(Math.random() * DEMO_PERSONAS.length)];
   const id = uid();
   const audioBlob = await synthDemoAudioBlob(id, seed.mood, 5 + Math.random() * 3);
   return {
@@ -381,7 +406,9 @@ async function ensureSeedData(center) {
     }
   }
 
-  await seedAround(center, SEED_RANGES);
+  for (const preset of PRESET_ECHOES) {
+    await putEcho(await buildDemoEcho(preset, { lat: preset.lat, lng: preset.lng }));
+  }
   localStorage.setItem('echospot-seed-version', String(SEED_VERSION));
 }
 
@@ -439,14 +466,21 @@ function migrateOldLikes() {
 // ---------- Map & list sync ----------
 function syncUserMarker() {
   if (!state.position) return;
-  setUserPosition(state.position, state.radius);
+  setUserPosition(state.position, UNLOCK_DISTANCE);
 }
 
 function refresh() {
   if (!state.position) return;
+  if (state.currentPlayingId) {
+    const playing = state.echoes.find((e) => e.id === state.currentPlayingId);
+    if (playing && !playing.url && distanceMeters(state.position, playing) > UNLOCK_DISTANCE) {
+      dom.audioPlayer.pause();
+      state.currentPlayingId = null;
+      showToast(`You moved out of range — echoes only play within ${UNLOCK_DISTANCE} m`);
+    }
+  }
   const list = state.echoes
     .map((e) => ({ ...e, dist: distanceMeters(state.position, { lat: e.lat, lng: e.lng }) }))
-    .filter((e) => e.dist <= state.radius)
     .sort((a, b) => a.dist - b.dist);
   state.currentList = list;
   renderFeedList(list);
@@ -454,10 +488,10 @@ function refresh() {
   if (!dom.detailModal.classList.contains('hidden')) updateDetailLockState();
   const note = state.geoFallbackNote ? ` · ${state.geoFallbackNote}` : '';
   const playable = list.filter((e) => e.url || e.dist <= UNLOCK_DISTANCE).length;
-  dom.statusLine.textContent = `${list.length} echo${list.length === 1 ? '' : 'es'} within ${formatRadiusLabel(state.radius)} · ${playable} playable here${note}`;
+  dom.statusLine.textContent = `${list.length} echo${list.length === 1 ? '' : 'es'} · ${playable} playable here (within ${UNLOCK_DISTANCE} m)${note}`;
   dom.peekCount.textContent = list.length
-    ? `${list.length} nearby · ${playable} playable`
-    : 'nothing within range';
+    ? `${list.length} echoes · ${playable} playable`
+    : 'no echoes yet';
   dom.tabNearbyBadge.textContent = String(playable);
   dom.tabNearbyBadge.classList.toggle('hidden', playable === 0);
   if (state.screen === 'you') renderYou();
@@ -465,28 +499,7 @@ function refresh() {
 
 function renderFeedList(list) {
   if (list.length === 0) {
-    const nearest = state.position
-      ? state.echoes
-          .map((e) => distanceMeters(state.position, { lat: e.lat, lng: e.lng }))
-          .sort((a, b) => a - b)[0]
-      : null;
-    dom.echoList.innerHTML = nearest
-      ? `<li class="empty-hint">Nothing within ${formatRadiusLabel(state.radius)}.
-           The closest echo is <b>${formatDistance(nearest)}</b> away.
-           <button class="widen-btn" id="widenBtn">Look out to ${formatRadiusLabel(Math.min(2000, Math.ceil(nearest / 100) * 100))}</button>
-           <span class="empty-or">or leave the first one here 🎵</span></li>`
-      : `<li class="empty-hint">No echoes near you yet — be the first to drop one 🎵</li>`;
-    const widen = el('widenBtn');
-    if (widen && nearest) {
-      widen.addEventListener('click', () => {
-        const next = Math.min(2000, Math.ceil(nearest / 100) * 100);
-        dom.radiusRange.value = String(next);
-        state.radius = next;
-        dom.radiusValue.textContent = formatRadiusLabel(next);
-        syncUserMarker();
-        refresh();
-      });
-    }
+    dom.echoList.innerHTML = `<li class="empty-hint">No echoes yet — be the first to leave one here 🎵</li>`;
     return;
   }
   dom.echoList.innerHTML = list
@@ -499,11 +512,11 @@ function renderFeedList(list) {
       const status = isLink
         ? `<span class="echo-status link">↗ opens in ${escapeHtml(detectService(echo.url))}</span>`
         : unlocked
-          ? '<span class="echo-status open">🔓 you are here · full echo</span>'
-          : `<span class="echo-status locked">🔒 ${PREVIEW_SECONDS} s preview · walk ${formatDistance(echo.dist - UNLOCK_DISTANCE)} to unlock</span>`;
+          ? '<span class="echo-status open">🔓 you are here · tap to listen</span>'
+          : `<span class="echo-status locked">🔒 walk ${formatDistance(echo.dist - UNLOCK_DISTANCE)} closer to listen</span>`;
       return `
       <li class="echo-item ${playing ? 'playing' : ''} ${!unlocked && !isLink ? 'locked' : ''}" data-id="${echo.id}">
-        <button class="echo-play-btn ${!unlocked && !isLink ? 'preview' : ''}" aria-label="${isLink ? 'Open link' : unlocked ? 'Play' : `Play ${PREVIEW_SECONDS} second preview`}">${playing ? '⏸' : '▶'}</button>
+        <button class="echo-play-btn ${!unlocked && !isLink ? 'is-locked' : ''}" aria-label="${isLink ? 'Open link' : unlocked ? 'Play' : `Locked — within ${UNLOCK_DISTANCE} m to listen`}">${playing ? '⏸' : !unlocked && !isLink ? '🔒' : '▶'}</button>
         <div class="echo-info">
           <div class="echo-title-row">
             <span class="echo-mood">${echo.mood}</span>
@@ -525,9 +538,7 @@ function renderFeedList(list) {
 function syncPlaybackUI() {
   renderFeedList(state.currentList);
   renderEchoes(state.currentList, state.currentPlayingId);
-  if (!dom.detailModal.classList.contains('hidden')) {
-    dom.detailPlayBtn.textContent = state.currentPlayingId === state.detailEchoId ? '⏸' : '▶';
-  }
+  if (!dom.detailModal.classList.contains('hidden')) updateDetailLockState();
 }
 
 // ---------- Playback ----------
@@ -551,15 +562,11 @@ async function playEcho(id) {
   if (state.currentPlayingId === id) {
     dom.audioPlayer.pause();
     state.currentPlayingId = null;
-    clearTimeout(state.previewTimerId);
-    state.previewTimerId = null;
     syncPlaybackUI();
     return;
   }
-  clearTimeout(state.previewTimerId);
-  state.previewTimerId = null;
 
-  const dist = state.position ? distanceMeters(state.position, echo) : 0;
+  const dist = state.position ? distanceMeters(state.position, echo) : null;
   const isLink = !!echo.url;
 
   // Streaming links open externally; we do not host copyrighted audio
@@ -571,22 +578,20 @@ async function playEcho(id) {
     return;
   }
 
-  const unlocked = dist <= UNLOCK_DISTANCE;
+  if (dist == null || dist > UNLOCK_DISTANCE) {
+    showToast(
+      dist == null
+        ? 'Waiting for your location…'
+        : `Too far to listen — walk ${formatDistance(dist - UNLOCK_DISTANCE)} closer (within ${UNLOCK_DISTANCE} m)`
+    );
+    return;
+  }
   try {
     dom.audioPlayer.src = getAudioUrl(echo);
     dom.audioPlayer.currentTime = 0;
     await dom.audioPlayer.play();
     state.currentPlayingId = id;
-    if (unlocked) {
-      incrementPlays(echo);
-    } else {
-      state.previewTimerId = setTimeout(() => {
-        dom.audioPlayer.pause();
-        state.currentPlayingId = null;
-        syncPlaybackUI();
-        showToast('Walk within 50 m to hear the full echo');
-      }, PREVIEW_SECONDS * 1000);
-    }
+    incrementPlays(echo);
   } catch (err) {
     console.error(err);
     showToast('Playback failed, please try again');
@@ -674,7 +679,6 @@ function openDetail(id) {
   renderReplies(echo);
   dom.replyInputArea.classList.add('hidden');
   dom.replyInput.value = '';
-  dom.detailPlayBtn.textContent = state.currentPlayingId === id ? '⏸' : '▶';
   dom.detailModal.classList.remove('hidden');
   flyToEcho(echo, bottomSheetInset());
 }
@@ -701,14 +705,14 @@ function updateDetailLockState() {
   if (locked) {
     dom.lockedHintText.textContent =
       dist == null
-        ? `Full echo unlocks within ${UNLOCK_DISTANCE} m of this spot`
-        : `${PREVIEW_SECONDS} s preview from here · walk ${formatDistance(Math.max(dist - UNLOCK_DISTANCE, 0))} for the full echo`;
+        ? `Echoes only play within ${UNLOCK_DISTANCE} m of the spot they were left`
+        : `Walk ${formatDistance(Math.max(dist - UNLOCK_DISTANCE, 0))} closer — echoes only play within ${UNLOCK_DISTANCE} m`;
   }
-  dom.previewTag.classList.toggle('hidden', !locked);
-  dom.detailPlayBtn.classList.toggle('preview', locked);
+  dom.detailPlayBtn.classList.toggle('is-locked', locked);
+  dom.detailPlayBtn.textContent = locked ? '🔒' : state.currentPlayingId === echo.id ? '⏸' : '▶';
   dom.detailPlayBtn.setAttribute(
     'aria-label',
-    locked ? `Play ${PREVIEW_SECONDS} second preview` : 'Play'
+    locked ? `Locked — within ${UNLOCK_DISTANCE} m to listen` : 'Play'
   );
 }
 
@@ -1207,12 +1211,6 @@ function wireEvents() {
   dom.testModeBtn.addEventListener('click', toggleTestMode);
   dom.menuTestModeBtn.addEventListener('click', toggleTestMode);
 
-  dom.radiusRange.addEventListener('input', () => {
-    state.radius = Number(dom.radiusRange.value);
-    dom.radiusValue.textContent = formatRadiusLabel(state.radius);
-    syncUserMarker();
-    refresh();
-  });
 
   dom.dropBtn.addEventListener('click', openDropModal);
 
@@ -1311,8 +1309,6 @@ function wireEvents() {
 
   dom.audioPlayer.addEventListener('ended', () => {
     state.currentPlayingId = null;
-    clearTimeout(state.previewTimerId);
-    state.previewTimerId = null;
     syncPlaybackUI();
   });
   dom.audioPlayer.addEventListener('timeupdate', updateDetailProgress);
@@ -1327,7 +1323,6 @@ function main() {
   }
 
   wireEvents();
-  dom.radiusValue.textContent = formatRadiusLabel(state.radius);
   setSheetState('default');
   showScreen('map');
 
