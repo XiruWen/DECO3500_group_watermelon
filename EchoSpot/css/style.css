@@ -777,7 +777,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
   z-index: 600;
 }
 .menu-dropdown.open { display: flex; }
-@media (min-width: 721px) {
+@media (min-width: 961px) {
   .menu-toggle { display: none !important; }
 }
 .menu-item {
@@ -796,7 +796,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .menu-item:hover { background: #ffffff0d; }
 
 /* ---------- Mobile: panel becomes a bottom sheet ---------- */
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .topbar { padding: 10px 12px; }
   .brand-sub { display: none; }
   .topbar-actions .chip-btn:not(#profileBtn):not(.menu-toggle) { display: none; }
@@ -895,7 +895,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .locked-hint-go:hover { border-color: var(--accent, #7c9bff); }
 
 /* ---------- Phones ---------- */
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .panel {
     left: 0;
     right: 0;
@@ -987,7 +987,7 @@ textarea:focus { outline: none; border-color: var(--accent); }
 .peek-count { display: none; }
 
 /* ---------- bottom sheet snap points (phones) ---------- */
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .panel.peek {
     height: auto;
     max-height: none;
@@ -1025,10 +1025,10 @@ textarea:focus { outline: none; border-color: var(--accent); }
   place-items: center;
 }
 .map-btn:hover { border-color: var(--accent, #7c9bff); }
-@media (min-width: 721px) {
+@media (min-width: 961px) {
   .map-btn { bottom: 96px; right: 420px; }
 }
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .layout:has(.panel.peek) .map-btn { bottom: calc(96px + 60px + env(safe-area-inset-bottom, 0px)); }
   .layout:has(.panel.expanded) .map-btn { opacity: 0; pointer-events: none; }
 }
@@ -1127,7 +1127,7 @@ body { -webkit-tap-highlight-color: transparent; }
 /* ---------- tab bar ---------- */
 .tabbar { display: none; }
 
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .tabbar {
     position: fixed;
     left: 0; right: 0; bottom: 0;
@@ -1268,7 +1268,7 @@ body { -webkit-tap-highlight-color: transparent; }
   .menu-toggle { display: none !important; }
 }
 
-@media (min-width: 721px) {
+@media (min-width: 961px) {
   /* desktop keeps map + side panel; the You page shares the panel slot */
   .screen-you {
     position: absolute;
@@ -1290,14 +1290,14 @@ body { -webkit-tap-highlight-color: transparent; }
 }
 
 .desktop-only { display: none; }
-@media (min-width: 721px) { .desktop-only { display: inline-flex; } }
-@media (max-width: 720px) {
+@media (min-width: 961px) { .desktop-only { display: inline-flex; } }
+@media (max-width: 960px) {
   .echo-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
   .echo-item .echo-likes { align-self: flex-start; margin-top: 2px; }
 }
 
 /* the drop button sits dead centre, two tabs either side */
-@media (max-width: 720px) {
+@media (max-width: 960px) {
   .tabbar { grid-template-columns: 1fr 1fr 86px 1fr 1fr; }
   .tab-drop {
     width: 56px; height: 56px;

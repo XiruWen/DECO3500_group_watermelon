@@ -355,13 +355,17 @@ function openOnboarding() {
 // ---------- Demo data ----------
 // First run seeds the fixed PRESET_ECHOES at UQ St Lucia. Anyone opening the app somewhere else
 // still gets a few demo echoes scattered around them (topUpNearby) so the map never looks empty.
-const SEED_VERSION = 4;
+const SEED_VERSION = 5;
 const TOPUP_RANGES = [[10, 35], [20, 45], [80, 200], [150, 400]];
 
 async function buildDemoEcho(seed, point) {
   const persona = seed.persona || DEMO_PERSONAS[Math.floor(Math.random() * DEMO_PERSONAS.length)];
   const id = uid();
-  const audioBlob = await synthDemoAudioBlob(id, seed.mood, 5 + Math.random() * 3);
+  // No audio is rendered here. Thirteen Web Audio renders on first launch is what made a fresh
+  // phone sit on a blank map: iOS caps live audio contexts and the whole seed would fail. The
+  // sound is synthesised on first play instead, from this seed, inside the tap that asks for it.
+  const audioSeed = id;
+  const duration = Math.round(5 + Math.random() * 3);
   return {
     id,
     lat: point.lat,
@@ -377,9 +381,10 @@ async function buildDemoEcho(seed, point) {
     likes: Math.floor(Math.random() * 20),
     plays: Math.floor(Math.random() * 50),
     replies: [],
-    audioBlob,
+    audioBlob: null,
+    audioSeed,
     url: '',
-    duration: Math.round(5 + Math.random() * 3),
+    duration,
     consent: true,
     isDemo: true,
   };
@@ -407,7 +412,11 @@ async function ensureSeedData(center) {
   }
 
   for (const preset of PRESET_ECHOES) {
-    await putEcho(await buildDemoEcho(preset, { lat: preset.lat, lng: preset.lng }));
+    try {
+      await putEcho(await buildDemoEcho(preset, { lat: preset.lat, lng: preset.lng }));
+    } catch (err) {
+      console.error('seed failed', preset.title, err);
+    }
   }
   localStorage.setItem('echospot-seed-version', String(SEED_VERSION));
 }
@@ -542,8 +551,13 @@ function syncPlaybackUI() {
 }
 
 // ---------- Playback ----------
-function getAudioUrl(echo) {
+async function getAudioUrl(echo) {
   if (state.audioUrlCache.has(echo.id)) return state.audioUrlCache.get(echo.id);
+  if (!echo.audioBlob && echo.audioSeed) {
+    echo.audioBlob = await synthDemoAudioBlob(echo.audioSeed, echo.mood, echo.duration || 6);
+    putEcho(echo).catch(() => {});
+  }
+  if (!echo.audioBlob) return null;
   const url = URL.createObjectURL(echo.audioBlob);
   state.audioUrlCache.set(echo.id, url);
   return url;
@@ -587,7 +601,16 @@ async function playEcho(id) {
     return;
   }
   try {
-    dom.audioPlayer.src = getAudioUrl(echo);
+    const url = await getAudioUrl(echo);
+    if (!url) {
+      showToast('This echo has no audio attached');
+      return;
+    }
+    // Always reload the source: after an echo has finished once, Safari will not replay a
+    // src it considers already ended unless the element is given it again.
+    dom.audioPlayer.pause();
+    dom.audioPlayer.src = url;
+    dom.audioPlayer.load();
     dom.audioPlayer.currentTime = 0;
     await dom.audioPlayer.play();
     state.currentPlayingId = id;
@@ -1118,7 +1141,7 @@ function renderPlaceThread(echo) {
 
 // ---------- Bottom sheet (phones) ----------
 function isPhoneLayout() {
-  return window.matchMedia('(max-width: 720px)').matches;
+  return window.matchMedia('(max-width: 960px)').matches;
 }
 
 function bottomSheetInset() {
