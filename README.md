@@ -26,7 +26,7 @@ already happens.
 | **Ethical Considerations** | [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Ethical-Considerations) |
 | **Stand-up records** | [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Stand%E2%80%90up-records) |
 | **Task board** | GitHub Projects *(not set up)* |
-| Poster & promotional material | A2 conference poster — tradeshow, Week 12 |
+| **Poster & walkthrough** | [`promotional/`](promotional/) — A2 poster and the eight-page prototype walkthrough |
 | Team Charter | [`Watermelon_Charter.pdf`](Watermelon_Charter.pdf) |
 
 ---
@@ -146,4 +146,4 @@ the **WIKI**.
 | Stand-up WIKI page (Week 9) | 🔄 records from Week 3 — [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Stand%E2%80%90up-records) |
 | Ethical Considerations (WIKI) | ✅ [WIKI](https://github.com/XiruWen/DECO3500_group_watermelon/wiki/Ethical-Considerations) |
 | Design Process Overview (WIKI) | ⬜ |
-| Poster & pitch (Week 12) | 🔄 A2 poster drafted, pitch to rehearse |
+| Poster & pitch (Week 12) | ✅ delivered at the tradeshow — [`promotional/`](promotional/) |
